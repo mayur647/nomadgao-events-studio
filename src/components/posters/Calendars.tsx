@@ -64,7 +64,7 @@ function Footer({ events, color, size = 28 }: { events: PosterEvent[]; color: st
 /* ───────────────────────── Timetable ───────────────────────── */
 function Timetable({ location, brands, week, events, size, w, h, pal, font, seed }: CalProps) {
   const story = size === "story", sq = size === "square";
-  const sceneH = story ? 380 : sq ? 200 : 260;
+  const sceneH = story ? 470 : sq ? 240 : 330;
   const days = byDay(events);
   return (
     <div style={base(w, h, pal)}>
@@ -169,7 +169,7 @@ function Tiles({ location, brands, week, events, size, w, h, pal, font, seed }: 
 function List({ location, brands, week, events, size, w, h, pal, font, seed }: CalProps) {
   const story = size === "story", sq = size === "square";
   const sorted = [...events].sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
-  const sceneH = story ? 340 : sq ? 170 : 220;
+  const sceneH = story ? 420 : sq ? 210 : 300;
   return (
     <div style={base(w, h, pal, { padding: sq ? "52px 56px 0" : "68px 72px 0" })}>
       <div style={{ display: "flex", justifyContent: "center" }}>
@@ -300,8 +300,8 @@ function Columns({ week, goa, dharamkot, size, w, h, goaPal, dkPal, font, seed, 
   const stacked = story;
   const card = (loc: LocationId, evs: PosterEvent[], pal: Palette, variant: number) => (
     <div style={{ flex: 1, minHeight: 0, minWidth: 0, background: pal.bg, color: pal.ink, borderRadius: 34, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      <div style={{ height: stacked ? 220 : sq ? 150 : 200, flexShrink: 0, position: "relative" }}>
-        <Scene location={loc} variant={variant} pal={pal} w={stacked ? 960 : 470} h={stacked ? 220 : sq ? 150 : 200} />
+      <div style={{ height: stacked ? 300 : sq ? 170 : 230, flexShrink: 0, position: "relative" }}>
+        <Scene location={loc} variant={variant} pal={pal} w="100%" h="100%" />
         <div style={{ position: "absolute", left: 24, top: 20, ...displayStyle(font, pal.ink), fontSize: sq ? 44 : 54, lineHeight: 1, background: pal.bg, padding: "8px 16px 10px", borderRadius: 14 }}>{LOCATIONS[loc].name}</div>
       </div>
       <div style={{ padding: sq ? "18px 24px 22px" : "24px 30px 30px", flex: 1, minHeight: 0, display: "flex" }}>

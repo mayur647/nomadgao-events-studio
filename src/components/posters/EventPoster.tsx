@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { eventType } from "@/lib/constants";
 import { BODY_FONT, HAND_FONT, type Palette } from "@/lib/themes";
 import { hash, pick } from "@/lib/rng";
-import { Scene, Sparkle, Squiggle } from "./Art";
+import { Scene, Sparkle, Squiggle, mix } from "./Art";
 import { Badges, FitText, InfoLines, Logos, Pill, QRBox, displayStyle, placeName, type PosterProps } from "./common";
 
 export const EVENT_TEMPLATES = ["arch", "ticket", "polaroid", "bigdate", "fullbleed", "postcard"] as const;
@@ -55,12 +55,7 @@ function Arch({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
       {photo ? (
         <Img src={photo} />
       ) : (
-        <>
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-            <Scene location={ev.location} variant={seed} pal={paperPal(pal)} w={aw} h={aw * 0.62} hotpot={ev.brands.includes("hotpot")} />
-          </div>
-          <div style={{ position: "absolute", top: "16%", width: "100%", textAlign: "center", fontSize: aw * 0.22 }}>{ev.emoji}</div>
-        </>
+        <Scene location={ev.location} variant={seed} pal={paperPal(pal)} w="100%" h="100%" />
       )}
     </div>
   );
@@ -75,7 +70,7 @@ function Arch({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
       {ev.time && <span style={{ fontWeight: 400 }}> · {ev.time}</span>}
     </div>
   );
-  const sceneH = story ? 300 : 0;
+  const sceneH = story ? 400 : 0;
   if (sq) {
     return (
       <div style={root(w, h, pal, { padding: 64 })}>
@@ -149,7 +144,7 @@ function Arch({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
 function Ticket({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const story = size === "story", sq = size === "square";
   const pp = paperPal(pal);
-  const sceneH = story ? 420 : sq ? 0 : 230;
+  const sceneH = story ? 560 : sq ? 1 : 360;
   const Field = ({ label, value }: { label: string; value: string }) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
       <div style={{ fontSize: sq ? 22 : 24, opacity: 0.6, fontWeight: 600 }}>{label}</div>
@@ -161,9 +156,9 @@ function Ticket({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   );
   return (
     <div style={root(w, h, pal, { padding: sq ? "56px 56px 0" : "64px 64px 0" })}>
-      {sceneH > 0 && (
+      {sceneH > 1 && (
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-          <Scene location={ev.location} variant={seed} pal={pal} w={w} h={sceneH} hotpot={ev.brands.includes("hotpot")} />
+          <Scene location={ev.location} variant={seed} pal={pal} w={w} h={sceneH} />
         </div>
       )}
       <div
@@ -175,7 +170,7 @@ function Ticket({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 24px 60px rgba(0,0,0,.25)",
-          marginBottom: sq ? 56 : sceneH - 110,
+          marginBottom: sq ? 56 : story ? 330 : 190,
           flex: 1,
           minHeight: 0,
           transform: `rotate(${sq ? 0 : (seed % 2 ? -1.2 : 1.2)}deg)`,
@@ -242,12 +237,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
           {photo ? (
             <Img src={photo} />
           ) : (
-            <>
-              <div style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-                <Scene location={ev.location} variant={seed} pal={pal} w={box} h={box * 0.6} hotpot={ev.brands.includes("hotpot")} />
-              </div>
-              <div style={{ position: "absolute", top: "12%", width: "100%", textAlign: "center", fontSize: box * 0.2 }}>{ev.emoji}</div>
-            </>
+            <Scene location={ev.location} variant={seed} pal={pal} w="100%" h="100%" />
           )}
         </div>
         <FitText max={story ? 64 : sq ? 40 : 50} min={28} maxLines={2} lineHeight={1.05} style={{ fontFamily: HAND_FONT, fontWeight: 700, color: "#2b2b2b", textAlign: "center", width: "100%", marginTop: 14 }}>
@@ -318,7 +308,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
 /* ───────────────────────── 4. Big date ───────────────────────── */
 function BigDate({ ev, size, w, h, pal, font, seed, qr }: PosterProps) {
   const story = size === "story", sq = size === "square";
-  const sceneH = story ? 480 : sq ? 180 : 250;
+  const sceneH = story ? 520 : sq ? 230 : 340;
   return (
     <div style={root(w, h, pal, { padding: sq ? "56px 64px 0" : "64px 72px 0" })}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -365,7 +355,8 @@ function BigDate({ ev, size, w, h, pal, font, seed, qr }: PosterProps) {
 function FullBleed({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const story = size === "story", sq = size === "square";
   const onPhoto = Boolean(photo);
-  const fg = onPhoto ? "#FFFFFF" : pal.ink;
+  const fg = onPhoto ? "#FFFFFF" : pal.bg;
+  const headFg = onPhoto ? "#FFFFFF" : pal.ink;
   return (
     <div style={root(w, h, pal, { padding: sq ? 60 : 72, color: fg })}>
       {photo ? (
@@ -377,16 +368,15 @@ function FullBleed({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) 
         </>
       ) : (
         <>
-          <div style={{ position: "absolute", left: 0, right: 0, top: sq ? 120 : story ? 300 : 200, textAlign: "center", fontSize: story ? 300 : 220 }}>{ev.emoji}</div>
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: story ? 760 : sq ? 420 : 560 }}>
-            <Scene location={ev.location} variant={seed} pal={pal} w={w} h={story ? 520 : 400} hotpot={ev.brands.includes("hotpot")} />
+          <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: story ? 1180 : sq ? 680 : 820 }}>
+            <Scene location={ev.location} variant={seed} pal={pal} w="100%" h="100%" />
           </div>
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: story ? 762 : sq ? 422 : 562, background: pal.bg }} />
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: story ? 742 : sq ? 402 : 532, background: mix(pal.bg, pal.art, 0.9) }} />
         </>
       )}
       <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <Logos brands={ev.brands} dark={onPhoto ? true : pal.dark} height={sq ? 50 : 60} color={fg} />
-        <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 40 : 50, fontWeight: 700 }}>{placeName(ev.location)}</div>
+        <Logos brands={ev.brands} dark={onPhoto ? true : pal.dark} height={sq ? 50 : 60} color={headFg} />
+        <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 40 : 50, fontWeight: 700, color: headFg }}>{placeName(ev.location)}</div>
       </div>
       <div
         style={{
@@ -447,8 +437,8 @@ function Postcard({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
       {photo ? (
         <Img src={photo} />
       ) : (
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-          <Scene location={ev.location} variant={seed} pal={pal} w={sq ? 460 : 880} h={sq ? 520 : story ? 600 : 440} hotpot={ev.brands.includes("hotpot")} />
+        <div style={{ position: "absolute", inset: 0 }}>
+          <Scene location={ev.location} variant={seed} pal={pal} w="100%" h="100%" />
         </div>
       )}
       <div style={{ position: "absolute", left: 36, top: 30, right: 36, color: photo ? "#fff" : pal.ink, textShadow: photo ? "0 2px 16px rgba(0,0,0,.55)" : "none" }}>

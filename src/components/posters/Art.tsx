@@ -2,301 +2,319 @@
 import { useEffect, useState } from "react";
 import type { Palette } from "@/lib/themes";
 
-/* ───────────────────────── geometry helpers ───────────────────────── */
+/*
+ * Illustration system — flat, layered silhouettes.
+ * One light source, one ground, depth from tone: far → near gets darker (or lighter on dark palettes).
+ * Every object stands on something. No outlines except tiny details, no floating objects.
+ * Scenes are drawn in a 1080 × 600 box with the focal point near the centre, so they crop well
+ * into wide strips (bottom-anchored) and into square / portrait frames.
+ */
+
 type P = [number, number];
 const f = (n: number) => Math.round(n * 10) / 10;
-const fp = (p: P): P => [f(p[0]), f(p[1])];
-const qb = (a: P, c: P, b: P, t: number): P => fp([
-  (1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0],
-  (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1],
-]);
-const cb = (a: P, c1: P, c2: P, b: P, t: number): P => {
-  const u = 1 - t;
-  return fp([
-    u * u * u * a[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * b[0],
-    u * u * u * a[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * b[1],
-  ]);
-};
 
-/* ───────────────────────── Goa pieces ───────────────────────── */
-function Palm({ x, y, s = 1, flip = false, stroke }: { x: number; y: number; s?: number; flip?: boolean; stroke: string }) {
-  const a: P = [0, 0], c1: P = [6, -90], c2: P = [22, -175], b: P = [62, -250];
-  const a2: P = [20, 0], c3: P = [26, -90], c4: P = [40, -172], b2: P = [74, -246];
-  const rings = [0.12, 0.24, 0.36, 0.48, 0.6, 0.72, 0.84].map((t) => [cb(a, c1, c2, b, t), cb(a2, c3, c4, b2, t)] as [P, P]);
-  const crown: P = [68, -250];
-  const fronds: [P, P][] = [
-    [[-150, 40], [-70, -70]],
-    [[-120, -60], [-50, -105]],
-    [[-35, -125], [-10, -110]],
-    [[70, -95], [30, -120]],
-    [[150, 30], [80, -70]],
-    [[105, 95], [90, 0]],
-    [[-95, 100], [-75, 0]],
+/* ───────────────────────── colour helpers ───────────────────────── */
+function hex(c: string): [number, number, number] {
+  const h = c.replace("#", "");
+  const v = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
+  return [parseInt(v.slice(0, 2), 16), parseInt(v.slice(2, 4), 16), parseInt(v.slice(4, 6), 16)];
+}
+export function mix(a: string, b: string, t: number) {
+  const A = hex(a), B = hex(b);
+  return "#" + A.map((x, i) => Math.round(x + (B[i] - x) * t).toString(16).padStart(2, "0")).join("");
+}
+/** Tonal steps from the background towards the ink colour. */
+function tones(pal: Palette) {
+  const t = (k: number) => mix(pal.bg, pal.art, k);
+  return { far: t(0.16), mid: t(0.3), forest: t(0.5), near: t(0.72), dark: t(0.9) };
+}
+
+/* deterministic jitter */
+const jit = (i: number, s = 1) => (Math.sin(i * 12.9898 + s * 78.233) * 43758.5453) % 1;
+
+/* ───────────────────────── shared pieces ───────────────────────── */
+function Pine({ x, y, h, fill }: { x: number; y: number; h: number; fill: string }) {
+  // a deodar: narrow, layered, slightly drooping tiers
+  const tiers = 5;
+  let d = "";
+  for (let i = 0; i < tiers; i++) {
+    const top = y - h + (i * h * 0.78) / tiers;
+    const bot = top + h * 0.3;
+    const half = h * (0.1 + i * 0.045);
+    d += `M${f(x)} ${f(top)} L${f(x + half)} ${f(bot)} Q${f(x)} ${f(bot - h * 0.05)} ${f(x - half)} ${f(bot)} Z `;
+  }
+  d += `M${f(x - h * 0.025)} ${f(y - h * 0.12)} H${f(x + h * 0.025)} V${f(y)} H${f(x - h * 0.025)} Z`;
+  return <path d={d} fill={fill} />;
+}
+
+function Birds({ x, y, color, s = 1 }: { x: number; y: number; color: string; s?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s})`} stroke={color} fill="none" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M0 0 q9 -9 18 0 q9 -9 18 0" />
+      <path d="M46 -22 q7 -7 14 0 q7 -7 14 0" />
+    </g>
+  );
+}
+
+const FLAG_COLORS = ["#2C58A6", "#F7F4EC", "#C8372D", "#3F8A4E", "#F2C14E"];
+function PrayerFlags({ a, b, sag, n, line }: { a: P; b: P; sag: number; n: number; line: string }) {
+  const c: P = [(a[0] + b[0]) / 2, Math.max(a[1], b[1]) + sag];
+  const q = (t: number): P => [
+    (1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0],
+    (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1],
   ];
   return (
-    <g transform={`translate(${x} ${y}) scale(${flip ? -s : s} ${s})`} stroke={stroke} fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <path d={`M0 0 C6 -90 22 -175 62 -250`} strokeWidth={4} />
-      <path d={`M20 0 C26 -90 40 -172 74 -246`} strokeWidth={4} />
-      {rings.map(([p, q], i) => (
-        <path key={i} d={`M${p[0]} ${p[1]} Q${(p[0] + q[0]) / 2} ${(p[1] + q[1]) / 2 + 6} ${q[0]} ${q[1]}`} strokeWidth={3} />
-      ))}
-      {fronds.map(([end, ctrl], i) => {
-        const e: P = [crown[0] + end[0], crown[1] + end[1]];
-        const c: P = [crown[0] + ctrl[0], crown[1] + ctrl[1]];
-        const leaves = [0.25, 0.37, 0.49, 0.61, 0.73, 0.85].map((t) => {
-          const p = qb(crown, c, e, t);
-          const p2 = qb(crown, c, e, Math.min(1, t + 0.06));
-          const dx = p2[0] - p[0], dy = p2[1] - p[1];
-          const len = Math.hypot(dx, dy) || 1;
-          const nx = -dy / len, ny = dx / len;
-          const L = 30 * (1 - t * 0.5);
-          const dir = ny > 0 ? 1 : -1;
-          return `M${p[0]} ${p[1]} l${f(nx * L * dir + dx * 0.6)} ${f(ny * L * dir + dy * 0.6)} M${p[0]} ${p[1]} l${f(-nx * L * dir * 0.6 + dx * 0.5)} ${f(-ny * L * dir * 0.6 + dy * 0.5)}`;
-        });
+    <g>
+      <path d={`M${a[0]} ${a[1]} Q${f(c[0])} ${f(c[1])} ${b[0]} ${b[1]}`} stroke={line} strokeWidth={2.5} fill="none" />
+      {Array.from({ length: n }, (_, i) => {
+        const t = (i + 0.6) / (n + 0.2);
+        const p = q(t);
+        const p2 = q(Math.min(1, t + 0.01));
+        const ang = f((Math.atan2(p2[1] - p[1], p2[0] - p[0]) * 180) / Math.PI);
         return (
-          <g key={i}>
-            <path d={`M${crown[0]} ${crown[1]} Q${c[0]} ${c[1]} ${e[0]} ${e[1]}`} strokeWidth={4} />
-            <path d={leaves.join(" ")} strokeWidth={2.5} />
+          <g key={i} transform={`translate(${f(p[0])} ${f(p[1])}) rotate(${ang})`}>
+            <path d="M-11 0 H11 V28 L0 24 L-11 28 Z" fill={FLAG_COLORS[i % 5]} />
           </g>
         );
       })}
-      <circle cx={60} cy={-236} r={9} strokeWidth={3} />
-      <circle cx={78} cy={-234} r={9} strokeWidth={3} />
-      <circle cx={70} cy={-222} r={9} strokeWidth={3} />
     </g>
   );
 }
 
-function Waves({ y, rows = 3, gap = 28, amp = 12, stroke, width = 1080 }: { y: number; rows?: number; gap?: number; amp?: number; stroke: string; width?: number }) {
-  const ds = Array.from({ length: rows }, (_, r) => {
-    const yy = y + r * gap;
-    const off = r % 2 ? -30 : 0;
-    let d = `M${-60 + off} ${yy}`;
-    for (let i = 0; i < Math.ceil(width / 60) + 3; i++) d += ` q15 ${-amp} 30 0 q15 ${amp} 30 0`;
-    return d;
-  });
+/* ───────────────────────── DHARAMKOT ───────────────────────── */
+const PEAKS: P[] = [[0, 330], [80, 285], [150, 300], [240, 225], [330, 285], [420, 240], [520, 175], [610, 255], [700, 215], [780, 255], [880, 190], [980, 260], [1080, 235]];
+
+function Range({ pts, fill, snow }: { pts: P[]; fill: string; snow: string }) {
+  const body = `M0 600 L${pts.map((p) => p.join(" ")).join(" L")} L1080 600 Z`;
+  const caps: string[] = [];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i];
+    const [lx, ly] = pts[i - 1], [rx, ry] = pts[i + 1];
+    if (!(ly > py && ry > py) || py > 260) continue;
+    const k = 0.34;
+    const L: P = [px + (lx - px) * k, py + (ly - py) * k];
+    const R: P = [px + (rx - px) * k, py + (ry - py) * k];
+    const base = Math.max(L[1], R[1]);
+    const mx = (t: number) => L[0] + (R[0] - L[0]) * t;
+    caps.push(`M${f(L[0])} ${f(L[1])} L${px} ${py} L${f(R[0])} ${f(R[1])} L${f(mx(0.78))} ${f(base - 8)} L${f(mx(0.62))} ${f(base + 6)} L${f(mx(0.45))} ${f(base - 6)} L${f(mx(0.28))} ${f(base + 8)} Z`);
+  }
   return (
-    <g stroke={stroke} fill="none" strokeWidth={3.5} strokeLinecap="round">
-      {ds.map((d, i) => (
-        <path key={i} d={d} opacity={1 - i * 0.18} />
+    <g>
+      <path d={body} fill={fill} />
+      {caps.map((d, i) => (
+        <path key={i} d={d} fill={snow} />
       ))}
     </g>
   );
 }
 
-function Sun({ cx, cy, r, stroke, fill }: { cx: number; cy: number; r: number; stroke: string; fill: string }) {
-  const stripes = [0.18, 0.36, 0.54, 0.72].map((k) => {
-    const d = r * k;
-    const half = Math.sqrt(r * r - d * d);
-    return `M${f(cx - half)} ${f(cy - d)} H${f(cx + half)}`;
-  });
-  const rays = Array.from({ length: 9 }, (_, i) => {
-    const ang = Math.PI + (i * Math.PI) / 8;
-    const r1 = r + 22, r2 = r + 52;
-    return `M${f(cx + Math.cos(ang) * r1)} ${f(cy + Math.sin(ang) * r1)} L${f(cx + Math.cos(ang) * r2)} ${f(cy + Math.sin(ang) * r2)}`;
-  });
+function Stupa({ x, y, s, body, trim, gold }: { x: number; y: number; s: number; body: string; trim: string; gold: string }) {
   return (
-    <g strokeLinecap="round">
-      <path d={`M${cx - r} ${cy} A${r} ${r} 0 0 1 ${cx + r} ${cy} Z`} fill={fill} stroke={stroke} strokeWidth={4} />
-      <path d={stripes.join(" ")} stroke={stroke} strokeWidth={3} />
-      <path d={rays.join(" ")} stroke={stroke} strokeWidth={4} />
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <path d="M-62 0 H62 V-14 H-62 Z" fill={trim} />
+      <path d="M-50 -14 H50 V-28 H-50 Z" fill={body} />
+      <path d="M-42 -28 A42 42 0 0 1 42 -28 Z" fill={body} />
+      <path d="M-13 -70 H13 V-56 H-13 Z" fill={trim} />
+      <path d="M-9 -70 L-3 -128 H3 L9 -70 Z" fill={gold} />
+      <path d="M-9 -84 H9 M-7 -98 H7 M-5 -112 H5" stroke={trim} strokeWidth={2.5} />
+      <circle cx={0} cy={-136} r={6} fill={gold} />
     </g>
   );
 }
 
-function Birds({ x, y, stroke, s = 1 }: { x: number; y: number; stroke: string; s?: number }) {
+function Monk({ x, y, s, robe, shawl, skin }: { x: number; y: number; s: number; robe: string; shawl: string; skin: string }) {
+  // seen walking away, simple and respectful: shaved head, robe, shawl over one shoulder
   return (
-    <g transform={`translate(${x} ${y}) scale(${s})`} stroke={stroke} fill="none" strokeWidth={3} strokeLinecap="round">
-      <path d="M0 0 q10 -12 20 0 q10 -12 20 0" />
-      <path d="M52 -26 q8 -9 16 0 q8 -9 16 0" />
-      <path d="M30 -48 q6 -7 12 0 q6 -7 12 0" />
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <path d="M-15 -52 C-22 -36 -25 -14 -26 0 H24 C23 -14 21 -36 14 -52 Q0 -58 -15 -52 Z" fill={robe} />
+      <path d="M-15 -52 Q0 -58 14 -52 C17 -44 19 -36 20 -26 C8 -32 -4 -40 -15 -52 Z" fill={shawl} />
+      <circle cx={0} cy={-64} r={10} fill={skin} />
     </g>
   );
 }
 
-function Boat({ x, y, stroke, fill }: { x: number; y: number; stroke: string; fill: string }) {
+export function HimalayaScene({ variant, pal, w = 1080, h = 440 }: { variant: number; pal: Palette; w?: number | string; h?: number | string }) {
+  const t = tones(pal);
+  const v = Math.abs(variant) % 3;
+  const snow = pal.dark ? mix(pal.ink, "#ffffff", 0.3) : "#FFFFFF";
+  const forestPines: { x: number; h: number }[] = [];
+  for (let i = 0; i < 46; i++) {
+    const x = i * 24 + jit(i) * 10;
+    const ridgeY = 448 + Math.sin(i / 4) * 10;
+    forestPines.push({ x, h: 46 + Math.abs(jit(i, 3)) * 46 + (ridgeY - 448) });
+  }
   return (
-    <g transform={`translate(${x} ${y})`} stroke={stroke} strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M-90 -6 Q0 30 90 -6 Q40 2 0 2 Q-40 2 -90 -6 Z" fill={fill} />
-      <path d="M-6 -2 V-110" fill="none" />
-      <path d="M-4 -106 L54 -26 H-4 Z" fill={fill} />
-      <path d="M-60 6 q10 6 20 0 M30 8 q10 6 20 0" fill="none" />
-    </g>
-  );
-}
-
-export function GoaScene({ variant, pal, w = 1080, h = 440 }: { variant: number; pal: Palette; w?: number; h?: number }) {
-  const s = pal.art;
-  const v = variant % 3;
-  return (
-    <svg viewBox="0 0 1080 440" width={w} height={h} preserveAspectRatio="xMidYMax slice" style={{ display: "block" }}>
-      {v === 0 && (
-        <>
-          <Sun cx={540} cy={330} r={120} stroke={s} fill={pal.accent} />
-          <path d="M0 330 H1080" stroke={s} strokeWidth={4} />
-          <Waves y={364} rows={3} stroke={s} />
-          <Palm x={120} y={440} s={1.15} stroke={s} />
-          <Palm x={960} y={440} s={0.95} flip stroke={s} />
-          <Birds x={640} y={150} stroke={s} />
-        </>
+    <svg viewBox="0 0 1080 600" width={w} height={h} preserveAspectRatio="xMidYMax slice" style={{ display: "block" }}>
+      {v === 2 ? (
+        <path d="M818 120 A44 44 0 1 0 862 178 A36 36 0 1 1 818 120 Z" fill={pal.accent} />
+      ) : (
+        <circle cx={v === 0 ? 800 : 300} cy={150} r={46} fill={pal.accent} />
       )}
-      {v === 1 && (
+      <Range pts={PEAKS} fill={t.far} snow={snow} />
+      <path d="M0 400 C120 352 230 384 320 364 S500 322 590 352 S780 394 880 352 S1010 334 1080 362 V600 H0 Z" fill={t.mid} />
+      <path d="M0 455 C200 436 380 466 540 450 S900 430 1080 456 V600 H0 Z" fill={t.forest} />
+      {forestPines.map((p, i) => (
+        <Pine key={i} x={p.x} y={460 + Math.sin(i / 4) * 8} h={p.h} fill={t.forest} />
+      ))}
+      {v === 1 && <Stupa x={540} y={516} s={1} body={snow} trim={t.dark} gold={pal.accent} />}
+      <path d="M0 520 C240 502 470 534 680 514 S960 498 1080 518 V600 H0 Z" fill={t.near} />
+      {/* foreground deodars, anchored on the near ground */}
+      <Pine x={70} y={540} h={250} fill={t.dark} />
+      <Pine x={150} y={548} h={170} fill={t.dark} />
+      <Pine x={1000} y={536} h={270} fill={t.dark} />
+      <Pine x={925} y={544} h={180} fill={t.dark} />
+      {/* prayer flags tied between a deodar and a pole, never across the sky */}
+      {v !== 2 && (
         <>
-          <Sun cx={830} cy={300} r={90} stroke={s} fill={pal.accent} />
-          <path d="M0 300 H1080" stroke={s} strokeWidth={4} />
-          <Waves y={332} rows={4} gap={26} stroke={s} />
-          <Boat x={560} y={300} stroke={s} fill={pal.accent2} />
-          <Palm x={90} y={440} s={1.25} stroke={s} />
-          <Palm x={250} y={440} s={0.85} stroke={s} />
-          <Birds x={380} y={130} stroke={s} s={0.9} />
+          <path d="M378 520 V320" stroke={t.dark} strokeWidth={6} strokeLinecap="round" />
+          <PrayerFlags a={[78, 330]} b={[378, 322]} sag={60} n={10} line={t.dark} />
+          <PrayerFlags a={[378, 322]} b={[700, 360]} sag={50} n={10} line={t.dark} />
+          <path d="M700 516 V360" stroke={t.dark} strokeWidth={6} strokeLinecap="round" />
         </>
       )}
       {v === 2 && (
         <>
-          <Sun cx={300} cy={320} r={100} stroke={s} fill={pal.accent} />
-          <path d="M0 320 H1080" stroke={s} strokeWidth={4} />
-          <Waves y={352} rows={3} stroke={s} />
-          <Palm x={700} y={440} s={1.05} flip stroke={s} />
-          <Palm x={880} y={440} s={1.3} stroke={s} />
-          <Palm x={60} y={440} s={0.8} flip stroke={s} />
-          <Birds x={470} y={170} stroke={s} />
+          <PrayerFlags a={[1000, 300]} b={[640, 380]} sag={55} n={12} line={t.dark} />
+          <path d="M640 516 V380" stroke={t.dark} strokeWidth={6} strokeLinecap="round" />
+          <Birds x={420} y={140} color={t.forest} />
         </>
       )}
+      {v === 1 && <Monk x={470} y={526} s={1.1} robe={pal.accent2} shawl={mix(pal.accent2, "#000000", 0.25)} skin={t.dark} />}
+      {v === 0 && <Monk x={560} y={528} s={1.1} robe={pal.accent2} shawl={mix(pal.accent2, "#000000", 0.25)} skin={t.dark} />}
+      <path d="M0 572 C300 560 700 584 1080 566 V600 H0 Z" fill={t.dark} />
     </svg>
   );
 }
 
-/* ───────────────────────── Himalaya pieces ───────────────────────── */
-function Range({ pts, stroke, snow, fill }: { pts: P[]; stroke: string; snow: string; fill: string }) {
-  const line = `M${pts.map((p) => p.join(" ")).join(" L")}`;
-  const caps: string[] = [];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const p = pts[i];
-    if (p[1] > 190) continue;
-    if (!(pts[i - 1][1] > p[1] && pts[i + 1][1] > p[1])) continue;
-    const L: P = fp([p[0] + (pts[i - 1][0] - p[0]) * 0.32, p[1] + (pts[i - 1][1] - p[1]) * 0.32]);
-    const R: P = fp([p[0] + (pts[i + 1][0] - p[0]) * 0.32, p[1] + (pts[i + 1][1] - p[1]) * 0.32]);
-    const mid = (L[1] + R[1]) / 2;
-    const xs = (k: number) => f(L[0] + (R[0] - L[0]) * k);
-    caps.push(`M${L[0]} ${L[1]} L${p[0]} ${p[1]} L${R[0]} ${R[1]} L${xs(0.78)} ${f(mid - 6)} L${xs(0.6)} ${f(mid + 10)} L${xs(0.42)} ${f(mid - 4)} L${xs(0.22)} ${f(mid + 12)} Z`);
+/* ───────────────────────── GOA ───────────────────────── */
+function Palm({ x, len, lean, fill }: { x: number; len: number; lean: number; fill: string }) {
+  // trunk: tapered curve from the sand to the crown
+  const base: P = [x, 600];
+  const crown: P = [x + lean * len * 0.42, 600 - len];
+  const c1: P = [x, 600 - len * 0.45];
+  const c2: P = [crown[0] - lean * len * 0.08, crown[1] + len * 0.28];
+  const pt = (s: number): P => {
+    const u = 1 - s;
+    return [
+      u * u * u * base[0] + 3 * u * u * s * c1[0] + 3 * u * s * s * c2[0] + s * s * s * crown[0],
+      u * u * u * base[1] + 3 * u * u * s * c1[1] + 3 * u * s * s * c2[1] + s * s * s * crown[1],
+    ];
+  };
+  const left: P[] = [], right: P[] = [];
+  for (let i = 0; i <= 16; i++) {
+    const s = i / 16;
+    const p = pt(s), q = pt(Math.min(1, s + 0.02));
+    const dx = q[0] - p[0], dy = q[1] - p[1];
+    const L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L, ny = dx / L;
+    const wdt = (len * 0.034) * (1 - s * 0.45);
+    left.push([p[0] + nx * wdt, p[1] + ny * wdt]);
+    right.push([p[0] - nx * wdt, p[1] - ny * wdt]);
   }
-  return (
-    <g strokeLinejoin="round" strokeLinecap="round">
-      <path d={`${line} L1080 440 L0 440 Z`} fill={fill} stroke="none" />
-      <path d={line} fill="none" stroke={stroke} strokeWidth={4} />
-      {caps.map((d, i) => (
-        <path key={i} d={d} fill={snow} stroke={stroke} strokeWidth={3} />
-      ))}
-    </g>
-  );
-}
-
-function Pine({ x, y, h, stroke, fill }: { x: number; y: number; h: number; stroke: string; fill: string }) {
-  const layers = [0, 1, 2, 3].map((i) => {
-    const top = y - h + i * h * 0.2;
-    const bot = top + h * 0.38;
-    const half = h * (0.16 + i * 0.07);
-    return `M${f(x)} ${f(top)} L${f(x + half)} ${f(bot)} Q${f(x)} ${f(bot - h * 0.06)} ${f(x - half)} ${f(bot)} Z`;
+  const trunk = `M${left.map((p) => `${f(p[0])} ${f(p[1])}`).join(" L")} L${right.reverse().map((p) => `${f(p[0])} ${f(p[1])}`).join(" L")} Z`;
+  const k = len / 380;
+  const fronds: [P, P][] = [
+    [[-175, 60], [-90, -40]],
+    [[-150, -30], [-70, -80]],
+    [[-70, -105], [-25, -80]],
+    [[45, -110], [20, -85]],
+    [[150, -40], [75, -85]],
+    [[180, 55], [95, -35]],
+    [[95, 120], [80, 20]],
+    [[-105, 120], [-80, 20]],
+  ];
+  const fd = fronds.map(([tip, ctl]) => {
+    const T: P = [crown[0] + tip[0] * k, crown[1] + tip[1] * k];
+    const C: P = [crown[0] + ctl[0] * k, crown[1] + ctl[1] * k];
+    const dx = T[0] - crown[0], dy = T[1] - crown[1];
+    const L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L, ny = dx / L;
+    const side = ny < 0 ? -1 : 1; // thickness hangs below the spine
+    const th = 26 * k;
+    const C2: P = [C[0] + nx * th * side * -1, C[1] + ny * th * side * -1 + th];
+    return `M${f(crown[0])} ${f(crown[1])} Q${f(C[0])} ${f(C[1])} ${f(T[0])} ${f(T[1])} Q${f(C2[0])} ${f(C2[1])} ${f(crown[0])} ${f(crown[1] + 6 * k)} Z`;
   });
   return (
-    <g stroke={stroke} strokeWidth={3} strokeLinejoin="round" fill={fill}>
-      <path d={`M${f(x)} ${f(y - h * 0.2)} V${f(y)}`} fill="none" />
-      {layers.map((d, i) => (
+    <g fill={fill}>
+      <path d={trunk} />
+      {fd.map((d, i) => (
         <path key={i} d={d} />
       ))}
+      <circle cx={f(crown[0] - 9 * k)} cy={f(crown[1] + 14 * k)} r={f(10 * k)} />
+      <circle cx={f(crown[0] + 10 * k)} cy={f(crown[1] + 16 * k)} r={f(10 * k)} />
     </g>
   );
 }
 
-const FLAG_COLORS = ["#2C58A6", "#FFFFFF", "#C8372D", "#3F8A4E", "#F2C14E"];
-function PrayerFlags({ a, b, c, n = 11, stroke }: { a: P; b: P; c: P; n?: number; stroke: string }) {
-  const flags = Array.from({ length: n }, (_, i) => {
-    const t = (i + 0.5) / n;
-    const p = qb(a, c, b, t);
-    const p2 = qb(a, c, b, Math.min(1, t + 0.02));
-    const ang = f((Math.atan2(p2[1] - p[1], p2[0] - p[0]) * 180) / Math.PI);
-    return { p, ang, color: FLAG_COLORS[i % 5] };
-  });
+function Boat({ x, y, hull, sail }: { x: number; y: number; hull: string; sail: string }) {
   return (
-    <g>
-      <path d={`M${a[0]} ${a[1]} Q${c[0]} ${c[1]} ${b[0]} ${b[1]}`} stroke={stroke} strokeWidth={3} fill="none" />
-      {flags.map((f, i) => (
-        <g key={i} transform={`translate(${f.p[0]} ${f.p[1]}) rotate(${f.ang * 0.6})`}>
-          <path d="M-15 0 H15 L13 40 H-13 Z" fill={f.color} stroke={stroke} strokeWidth={2.5} strokeLinejoin="round" />
-          <path d="M-6 14 H6 M-6 22 H6" stroke={stroke} strokeWidth={1.6} opacity={0.5} />
+    <g transform={`translate(${x} ${y})`}>
+      <path d="M-4 -4 V-96" stroke={hull} strokeWidth={4} />
+      <path d="M0 -92 L52 -16 H0 Z" fill={sail} />
+      <path d="M-86 -8 Q0 24 86 -8 Q40 0 0 0 Q-40 0 -86 -8 Z" fill={hull} />
+    </g>
+  );
+}
+
+export function GoaScene({ variant, pal, w = 1080, h = 440 }: { variant: number; pal: Palette; w?: number | string; h?: number | string }) {
+  const t = tones(pal);
+  const v = Math.abs(variant) % 3;
+  const horizon = 400;
+  const sea = mix(pal.bg, pal.accent2, pal.dark ? 0.45 : 0.4);
+  const seaLine = mix(sea, pal.bg, 0.5);
+  const sand = mix(pal.bg, pal.accent, 0.22);
+  const sunX = v === 1 ? 300 : 540;
+  const sunR = v === 1 ? 120 : 150;
+  return (
+    <svg viewBox="0 0 1080 600" width={w} height={h} preserveAspectRatio="xMidYMax slice" style={{ display: "block" }}>
+      {v === 2 ? (
+        <circle cx={790} cy={170} r={58} fill={pal.accent} />
+      ) : (
+        <g>
+          <path d={`M${sunX - sunR} ${horizon} A${sunR} ${sunR} 0 0 1 ${sunX + sunR} ${horizon} Z`} fill={pal.accent} />
+          {[18, 40, 60].map((d, i) => (
+            <rect key={i} x={sunX - sunR} y={horizon - d} width={sunR * 2} height={6 + i * 2} fill={pal.bg} />
+          ))}
         </g>
-      ))}
-    </g>
-  );
-}
-
-function Monk({ x, y, s = 1, stroke, robe, umbrella }: { x: number; y: number; s?: number; stroke: string; robe: string; umbrella: string }) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${s})`} stroke={stroke} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M-46 -96 Q0 -138 46 -96 Q34 -101 23 -96 Q12 -101 0 -96 Q-12 -101 -23 -96 Q-34 -101 -46 -96 Z" fill={umbrella} />
-      <path d="M0 -118 V-128 M0 -96 V-58" fill="none" />
-      <circle cx={-2} cy={-68} r={11} fill="none" />
-      <path d="M-14 -54 C-22 -36 -26 -14 -28 0 L24 0 C22 -14 19 -36 12 -54 Q-1 -60 -14 -54 Z" fill={robe} />
-      <path d="M-14 -54 C-2 -42 10 -24 22 -6" fill="none" />
-      <path d="M12 -50 C18 -44 10 -60 2 -62" fill="none" />
-      <path d="M-14 0 V8 M10 0 L14 8" fill="none" />
-    </g>
-  );
-}
-
-function Stupa({ x, y, s = 1, stroke, fill, accent }: { x: number; y: number; s?: number; stroke: string; fill: string; accent: string }) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${s})`} stroke={stroke} strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round">
-      <path d="M-70 0 H70 V-18 H-70 Z" fill={fill} />
-      <path d="M-54 -18 H54 V-34 H-54 Z" fill={fill} />
-      <path d="M-46 -34 A46 46 0 0 1 46 -34 Z" fill={fill} />
-      <path d="M-14 -80 H14 V-64 H-14 Z" fill={accent} />
-      <path d="M-11 -80 L-4 -140 H4 L11 -80" fill={fill} />
-      <path d="M-9 -94 H9 M-7 -108 H7 M-6 -122 H6" fill="none" />
-      <path d="M-8 -150 Q0 -138 8 -150" fill="none" />
-      <circle cx={0} cy={-158} r={4} fill={accent} />
-    </g>
-  );
-}
-
-export function HimalayaScene({ variant, pal, w = 1080, h = 440 }: { variant: number; pal: Palette; w?: number; h?: number }) {
-  const s = pal.art;
-  const snow = pal.dark ? pal.ink : "#FFFFFF";
-  const v = variant % 3;
-  const back: P[] = [[0, 290], [90, 220], [150, 250], [260, 120], [340, 205], [420, 170], [520, 250], [640, 92], [740, 205], [820, 165], [900, 235], [1000, 140], [1080, 215]];
-  const front = "M0 372 C180 322 330 382 520 346 S880 312 1080 356 L1080 440 L0 440 Z";
-  return (
-    <svg viewBox="0 0 1080 440" width={w} height={h} preserveAspectRatio="xMidYMax slice" style={{ display: "block" }}>
-      <Range pts={back} stroke={s} snow={snow} fill={pal.bg} />
-      <path d={front} fill={pal.bg} stroke={s} strokeWidth={4} />
+      )}
+      <rect x={0} y={horizon} width={1080} height={200} fill={sea} />
+      {/* sun glitter on water */}
+      {v !== 2 &&
+        [0, 1, 2, 3].map((i) => (
+          <rect key={i} x={sunX - (sunR * 0.8 - i * 26)} y={horizon + 14 + i * 16} width={(sunR * 0.8 - i * 26) * 2} height={5} rx={2.5} fill={pal.accent} opacity={0.75} />
+        ))}
+      {[430, 462].map((y, i) => {
+        let d = `M${-40 + i * 30} ${y}`;
+        for (let k = 0; k < 24; k++) d += " q12 -8 24 0 q12 8 24 0";
+        return <path key={y} d={d} stroke={seaLine} strokeWidth={3} fill="none" opacity={0.8} />;
+      })}
+      {v === 1 && <Boat x={760} y={452} hull={t.dark} sail={pal.paper} />}
+      {v === 2 && <Birds x={360} y={170} color={t.near} />}
+      {v === 0 && <Birds x={720} y={200} color={t.near} s={0.9} />}
+      <path d="M0 492 C260 474 620 508 1080 484 V600 H0 Z" fill={sand} />
+      {/* palms grouped at the edges, rooted in the sand */}
       {v === 0 && (
         <>
-          <PrayerFlags a={[-10, 40]} b={[520, 110]} c={[260, 170]} n={10} stroke={s} />
-          {[60, 130, 880, 950, 1020].map((x, i) => (
-            <Pine key={x} x={x} y={440} h={[150, 110, 120, 170, 130][i]} stroke={s} fill={pal.bg} />
-          ))}
-          <Monk x={560} y={385} s={0.95} stroke={s} robe={pal.accent2} umbrella={pal.accent} />
+          <Palm x={110} len={328} lean={0.7} fill={t.dark} />
+          <Palm x={210} len={245} lean={0.45} fill={t.near} />
+          <Palm x={990} len={295} lean={-0.6} fill={t.dark} />
         </>
       )}
       {v === 1 && (
         <>
-          <PrayerFlags a={[560, 70]} b={[1090, 30]} c={[820, 150]} n={10} stroke={s} />
-          <Stupa x={300} y={400} s={1.05} stroke={s} fill={pal.bg} accent={pal.accent} />
-          <Monk x={430} y={402} s={0.8} stroke={s} robe={pal.accent2} umbrella={pal.accent} />
-          {[40, 760, 840, 930, 1030].map((x, i) => (
-            <Pine key={x} x={x} y={440} h={[140, 120, 175, 135, 160][i]} stroke={s} fill={pal.bg} />
-          ))}
+          <Palm x={930} len={344} lean={-0.75} fill={t.dark} />
+          <Palm x={1010} len={270} lean={-0.35} fill={t.near} />
+          <Palm x={70} len={229} lean={0.5} fill={t.near} />
         </>
       )}
       {v === 2 && (
         <>
-          <PrayerFlags a={[-10, 120]} b={[1090, 90]} c={[540, 230]} n={18} stroke={s} />
-          {[40, 120, 200, 300, 760, 850, 930, 1010, 1080].map((x, i) => (
-            <Pine key={x} x={x} y={440} h={[160, 120, 145, 105, 115, 165, 130, 175, 120][i]} stroke={s} fill={pal.bg} />
-          ))}
-          <Birds x={600} y={60} stroke={s} s={0.9} />
+          <Palm x={120} len={311} lean={0.55} fill={t.dark} />
+          <Palm x={880} len={344} lean={-0.5} fill={t.dark} />
+          <Palm x={980} len={254} lean={-0.2} fill={t.near} />
         </>
       )}
+      <path d="M0 568 C300 556 700 580 1080 562 V600 H0 Z" fill={t.near} />
     </svg>
   );
 }
@@ -353,17 +371,11 @@ export function Scene({
   location: "goa" | "dharamkot";
   variant: number;
   pal: Palette;
-  w?: number;
-  h?: number;
+  w?: number | string;
+  h?: number | string;
   hotpot?: boolean;
 }) {
-  if (hotpot && variant % 4 === 3) {
-    return (
-      <div style={{ width: w, height: h, display: "flex", alignItems: "flex-end", justifyContent: "center", overflow: "hidden" }}>
-        <HotpotArt color={pal.art} width={Math.min(w * 0.75, h * 1.45)} />
-      </div>
-    );
-  }
+  void hotpot;
   return location === "goa" ? <GoaScene variant={variant} pal={pal} w={w} h={h} /> : <HimalayaScene variant={variant} pal={pal} w={w} h={h} />;
 }
 
