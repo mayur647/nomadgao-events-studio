@@ -40,8 +40,18 @@ Everything runs on free tiers: **Vercel** (hosting), **Supabase** (logins, datab
 4. **Authentication → URL Configuration**: set Site URL to your Vercel URL (and later your custom domain).
 5. **Project Settings → API**: copy the Project URL and the `anon` key.
 
+### 1b. Google sign-in (free)
+1. [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services → OAuth consent screen**: External, app name "NomadGao Events Studio", your support email, publish.
+2. **Credentials → Create credentials → OAuth client ID → Web application**.
+   - Authorized JavaScript origins: `https://nomadgao-events-studio.vercel.app` (and your custom domain later)
+   - Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+3. Supabase → **Authentication → Sign In / Providers → Google**: enable, paste the Client ID and Client secret, save.
+4. Supabase → **Authentication → URL Configuration**: Site URL = your app URL; add `https://<your-app>/**` to Redirect URLs.
+
+Email + password stays available under "Use email and password instead".
+
 ### 2. Gemini (free, optional)
-[aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key.
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key. Google Cloud (Vertex AI express) keys starting with `AQ.` also work.
 
 ### 3. Vercel
 Import this GitHub repo → add Environment Variables → Deploy:
