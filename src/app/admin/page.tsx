@@ -6,7 +6,7 @@ import { useToast } from "@/components/app/Toast";
 import { sb } from "@/lib/supabase";
 import { LOCATIONS, eventType } from "@/lib/constants";
 import { addDays, dateShort, dayName, toISO, todayIST } from "@/lib/format";
-import { downloadBlob } from "@/lib/export";
+import { copyText, downloadBlob } from "@/lib/export";
 import type { EventRow, GenerationRow, Profile, RsvpRow } from "@/lib/types";
 
 type Tab = "overview" | "people" | "rsvps" | "data";
@@ -172,11 +172,84 @@ function Overview() {
   );
 }
 
+interface Invite {
+  email: string;
+  role: "manager" | "admin";
+  location: "goa" | "dharamkot" | null;
+  created_at: string;
+}
+
+function inviteMessage(email: string) {
+  const url = typeof window !== "undefined" ? window.location.origin : "";
+  return `Hi! You've been added to the NomadGao Events Studio, where we make our weekly event posters and captions.\n\nOpen ${url} and click "Continue with Google" using ${email}. You'll go straight in.`;
+}
+
+function AddPerson({ onDone, people }: { onDone: () => void; people: Profile[] }) {
+  const { session } = useAuth();
+  const toast = useToast();
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"manager" | "admin">("manager");
+  const [location, setLocation] = useState<"" | "goa" | "dharamkot">("");
+  const [busy, setBusy] = useState(false);
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    const em = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return toast("That doesn't look like an email address.", "err");
+    setBusy(true);
+    const existing = people.find((p) => p.email.toLowerCase() === em);
+    const { error } = existing
+      ? await sb().from("profiles").update({ role, location: location || null }).eq("id", existing.id)
+      : await sb().from("invites").upsert({ email: em, role, location: location || null, invited_by: session?.user.id });
+    setBusy(false);
+    if (error) {
+      if (/invites/.test(error.message) && /(find|exist)/i.test(error.message)) toast("One-time setup needed: run supabase/migrations/002_invites.sql in Supabase → SQL Editor.", "err");
+      else toast(error.message, "err");
+      return;
+    }
+    if (existing) toast(`${existing.full_name || em} now has access`);
+    else {
+      await copyText(inviteMessage(em));
+      toast("Added. The invite message is copied, so paste it to them on WhatsApp.");
+    }
+    setEmail("");
+    onDone();
+  }
+  return (
+    <form onSubmit={add} className="card p-4 flex flex-wrap items-end gap-3">
+      <div className="flex-1 min-w-[220px]">
+        <label className="label" htmlFor="inv-email">Add a person</label>
+        <input id="inv-email" type="email" className="input" placeholder="their Google / Gmail address" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </div>
+      <div>
+        <label className="label" htmlFor="inv-role">Access</label>
+        <select id="inv-role" className="input !w-auto" value={role} onChange={(e) => setRole(e.target.value as "manager" | "admin")}>
+          <option value="manager">Community manager</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div>
+        <label className="label" htmlFor="inv-loc">Location</label>
+        <select id="inv-loc" className="input !w-auto" value={location} onChange={(e) => setLocation(e.target.value as "" | "goa" | "dharamkot")}>
+          <option value="">Both</option>
+          <option value="goa">Goa</option>
+          <option value="dharamkot">Dharamkot</option>
+        </select>
+      </div>
+      <button className="btn-primary" disabled={busy}>{busy ? "Adding…" : "Add person"}</button>
+      <p className="hint w-full !mt-0">They&apos;re approved automatically the first time they sign in with this email.</p>
+    </form>
+  );
+}
+
 function People() {
   const { session } = useAuth();
   const toast = useToast();
   const [people, setPeople] = useState<Profile[] | null>(null);
-  const load = useCallback(() => sb().from("profiles").select("*").order("created_at").then(({ data }) => setPeople((data as Profile[]) ?? [])), []);
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const load = useCallback(() => {
+    sb().from("profiles").select("*").order("created_at").then(({ data }) => setPeople((data as Profile[]) ?? []));
+    sb().from("invites").select("*").order("created_at").then(({ data }) => setInvites((data as Invite[]) ?? []));
+  }, []);
   useEffect(() => {
     load();
   }, [load]);
@@ -193,8 +266,29 @@ function People() {
   }
   if (!people) return <p className="text-mute">Loading…</p>;
   const pending = people.filter((p) => p.role === "pending");
+  async function removeInvite(email: string) {
+    const { error } = await sb().from("invites").delete().eq("email", email);
+    if (error) toast(error.message, "err");
+    else load();
+  }
   return (
     <div className="space-y-4">
+      <AddPerson onDone={load} people={people} />
+      {invites.length > 0 && (
+        <div className="card p-4">
+          <h2 className="font-semibold mb-2">Invited, not signed in yet</h2>
+          <ul className="divide-y divide-line text-sm">
+            {invites.map((i) => (
+              <li key={i.email} className="py-2 flex flex-wrap items-center gap-3">
+                <span className="font-medium mr-auto">{i.email}</span>
+                <span className="text-mute">{i.role === "admin" ? "Admin" : "Community manager"} · {i.location === "goa" ? "Goa" : i.location === "dharamkot" ? "Dharamkot" : "Both"}</span>
+                <button className="btn-ghost btn-sm" onClick={() => copyText(inviteMessage(i.email)).then(() => toast("Invite message copied"))}>Copy invite</button>
+                <button className="btn-ghost btn-sm" onClick={() => removeInvite(i.email)}>Remove</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {pending.length > 0 && (
         <div className="card p-4 border-saffron bg-[#fff8ec]">
           <h2 className="font-semibold">{pending.length} waiting for approval</h2>
