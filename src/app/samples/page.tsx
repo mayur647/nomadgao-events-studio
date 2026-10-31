@@ -11,7 +11,10 @@ import { hash } from "@/lib/rng";
 
 export default function SamplesPage() {
   const week = toISO(weekStart(todayIST()));
-  const events = useMemo(() => sampleEvents(week), [week]);
+  const [withPhotos, setWithPhotos] = useState(false);
+  const baseEvents = useMemo(() => sampleEvents(week), [week]);
+  const SAMPLE_PHOTOS = ["/samples/bright.jpg", "/samples/warm.jpg", "/samples/bokeh.jpg"];
+  const events = useMemo(() => (withPhotos ? baseEvents.map((e, i) => ({ ...e, photo_path: SAMPLE_PHOTOS[i % 3] })) : baseEvents), [baseEvents, withPhotos]);
   const [seed, setSeed] = useState(hash(week));
   const [size, setSize] = useState<SizeId>("post");
   const [only, setOnly] = useState<string | null>(null);
@@ -23,7 +26,8 @@ export default function SamplesPage() {
     if (p.get("seed")) setSeed(Number(p.get("seed")));
     if (p.get("size")) setSize(p.get("size") as SizeId);
     if (p.get("only")) setOnly(p.get("only"));
-    toDataUrl("/samples/bokeh.jpg").then((d) => setPhotoData({ "/samples/bokeh.jpg": d }));
+    if (p.get("photos")) setWithPhotos(true);
+    Promise.all(["/samples/bokeh.jpg", "/samples/bright.jpg", "/samples/warm.jpg"].map(async (u) => [u, await toDataUrl(u)] as const)).then((r) => setPhotoData(Object.fromEntries(r)));
     Promise.all(events.map(async (e) => [e.id, await qrDataUrl(`https://example.com/rsvp/${e.id}`)] as const)).then((r) => setQrData(Object.fromEntries(r)));
   }, [events]);
 
@@ -38,6 +42,9 @@ export default function SamplesPage() {
             {SIZES[s].label}
           </button>
         ))}
+        <button className={`chip ${withPhotos ? "chip-on" : ""}`} onClick={() => setWithPhotos((x) => !x)}>
+          With photos
+        </button>
         <button className="btn-primary" onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>
           Shuffle
         </button>

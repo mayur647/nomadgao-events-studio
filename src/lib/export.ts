@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { toBlob } from "html-to-image";
 import QRCode from "qrcode";
+import { measurePhoto } from "./photo";
 
 /* ───────────────────────── image helpers ───────────────────────── */
 const dataUrlCache = new Map<string, Promise<string | null>>();
@@ -26,6 +27,10 @@ export function toDataUrl(url: string | null): Promise<string | null> {
               fr.readAsDataURL(b);
             })
         )
+        .then(async (d) => {
+          await measurePhoto(d);
+          return d;
+        })
         .catch(() => null)
     );
   }

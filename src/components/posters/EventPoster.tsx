@@ -4,6 +4,7 @@ import { eventType } from "@/lib/constants";
 import { BODY_FONT, HAND_FONT, type Palette } from "@/lib/themes";
 import { hash, pick } from "@/lib/rng";
 import { Scene, Sparkle, Squiggle, mix } from "./Art";
+import { lum, photoStats } from "@/lib/photo";
 import { Badges, FitText, InfoLines, Logos, Pill, QRBox, displayStyle, placeName, type PosterProps } from "./common";
 
 export const EVENT_TEMPLATES = ["arch", "ticket", "polaroid", "bigdate", "fullbleed", "postcard"] as const;
@@ -32,10 +33,30 @@ const root = (w: number, h: number, pal: Palette, extra?: CSSProperties): CSSPro
 
 const paperPal = (pal: Palette): Palette => ({ ...pal, bg: pal.paper, art: pal.paperInk, ink: pal.paperInk, dark: false });
 
-function Img({ src, style }: { src: string; style?: CSSProperties }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...style }} />;
+/**
+ * A photo, cropped to fill its frame (biased slightly upwards, where faces and the action
+ * usually are) with a light grade in the palette's colour so photos from different phones
+ * sit together on the same week's posters.
+ */
+function Img({ src, style, grade, position = "50% 38%" }: { src: string; style?: CSSProperties; grade?: string; position?: string }) {
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", ...style }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: position, display: "block", filter: "saturate(1.06) contrast(1.04)" }} />
+      {grade && <div style={{ position: "absolute", inset: 0, background: grade, mixBlendMode: "soft-light", opacity: 0.35 }} />}
+    </div>
+  );
 }
+
+/** A dark colour from the palette to shade photos behind text (falls back to near-black). */
+function shadeOf(pal: Palette) {
+  const c = lum(pal.bg) < 0.25 ? pal.bg : lum(pal.ink) < 0.25 ? pal.ink : lum(pal.paperInk) < 0.25 ? pal.paperInk : "#111417";
+  return mix(c, "#000000", 0.25);
+}
+const rgba = (hexc: string, a: number) => {
+  const h = hexc.replace("#", "");
+  return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${Math.max(0, Math.min(1, a)).toFixed(3)})`;
+};
 
 function Header({ ev, pal, logoH = 62, dark }: { ev: PosterProps["ev"]; pal: Palette; logoH?: number; dark?: boolean }) {
   return (
@@ -53,7 +74,7 @@ function Arch({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const archFace = (height: number | string) => (
     <div style={{ width: aw, height, borderRadius: `${aw / 2}px ${aw / 2}px 30px 30px`, overflow: "hidden", background: pal.paper, border: `6px solid ${pal.ink}`, position: "relative", flexShrink: 0 }}>
       {photo ? (
-        <Img src={photo} />
+        <Img src={photo} grade={pal.accent} />
       ) : (
         <Scene location={ev.location} variant={seed} pal={paperPal(pal)} w="100%" h="100%" />
       )}
@@ -178,7 +199,7 @@ function Ticket({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
       >
         {photo && !sq && (
           <div style={{ height: story ? 520 : 300, borderRadius: "34px 34px 0 0", overflow: "hidden", flexShrink: 0 }}>
-            <Img src={photo} />
+            <Img src={photo} grade={pal.accent} />
           </div>
         )}
         <div style={{ padding: sq ? "40px 48px 28px" : "48px 56px 32px", display: "flex", flexDirection: "column", gap: sq ? 18 : 26, flex: 1, minHeight: 0 }}>
@@ -235,7 +256,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
       <div style={{ background: "#FFFEFA", padding: sq ? "22px 22px 20px" : "30px 30px 28px", boxShadow: "0 26px 50px rgba(0,0,0,.28)", width: box + (sq ? 44 : 60) }}>
         <div style={{ width: box, height: story ? box * 0.95 : box * 0.85, overflow: "hidden", background: pal.bg, position: "relative" }}>
           {photo ? (
-            <Img src={photo} />
+            <Img src={photo} grade={pal.accent} />
           ) : (
             <Scene location={ev.location} variant={seed} pal={pal} w="100%" h="100%" />
           )}
@@ -288,7 +309,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   return (
     <div style={root(w, h, pal, { padding: "64px 72px", alignItems: "center" })}>
       {story && (
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, opacity: 0.16 }}>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, opacity: 0.09 }}>
           <Scene location={ev.location} variant={seed + 2} pal={pal} w={w} h={360} />
         </div>
       )}
@@ -306,7 +327,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
 }
 
 /* ───────────────────────── 4. Big date ───────────────────────── */
-function BigDate({ ev, size, w, h, pal, font, seed, qr }: PosterProps) {
+function BigDate({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const story = size === "story", sq = size === "square";
   const sceneH = story ? 520 : sq ? 230 : 340;
   return (
@@ -345,7 +366,13 @@ function BigDate({ ev, size, w, h, pal, font, seed, qr }: PosterProps) {
       </div>
       </div>
       <div style={{ marginLeft: sq ? -64 : -72, marginRight: sq ? -64 : -72, height: sceneH }}>
-        <Scene location={ev.location} variant={seed} pal={pal} w={w} h={sceneH} hotpot={ev.brands.includes("hotpot")} />
+        {photo && !sq ? (
+          <div style={{ width: "100%", height: "100%", borderRadius: "40px 40px 0 0", overflow: "hidden", borderTop: `10px solid ${pal.accent}` }}>
+            <Img src={photo} grade={pal.accent} position="50% 55%" />
+          </div>
+        ) : (
+          <Scene location={ev.location} variant={seed} pal={pal} w={w} h={sceneH} />
+        )}
       </div>
     </div>
   );
@@ -357,14 +384,21 @@ function FullBleed({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) 
   const onPhoto = Boolean(photo);
   const fg = onPhoto ? "#FFFFFF" : pal.bg;
   const headFg = onPhoto ? "#FFFFFF" : pal.ink;
+  // Shade strength follows how bright the photo is where the text sits, in the palette's own dark tone.
+  const st = photoStats(photo) ?? { top: 0.6, mid: 0.6, bottom: 0.6 };
+  const shade = shadeOf(pal);
+  const topA = Math.min(0.75, 0.3 + st.top * 0.55);
+  const midA = Math.min(0.85, 0.55 + st.bottom * 0.35);
+  const botA = Math.min(0.97, 0.8 + st.bottom * 0.2);
+  const scrim = `linear-gradient(180deg, ${rgba(shade, topA)} 0%, ${rgba(shade, 0)} ${sq ? 24 : 18}%, ${rgba(shade, 0)} ${story ? 34 : 26}%, ${rgba(shade, midA)} ${story ? 58 : 52}%, ${rgba(shade, botA)} 100%)`;
   return (
     <div style={root(w, h, pal, { padding: sq ? 60 : 72, color: fg })}>
       {photo ? (
         <>
           <div style={{ position: "absolute", inset: 0 }}>
-            <Img src={photo} />
+            <Img src={photo} grade={pal.accent} />
           </div>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,12,14,.55) 0%, rgba(10,12,14,0) 20%, rgba(10,12,14,0) 36%, rgba(10,12,14,.78) 66%, rgba(10,12,14,.92) 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, background: scrim }} />
         </>
       ) : (
         <>
@@ -435,13 +469,22 @@ function Postcard({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const picture = (
     <div style={{ position: "relative", overflow: "hidden", background: pal.bg, borderRadius: 10, ...(sq ? { width: "46%", height: "100%" } : { height: story ? 820 : 520, flexShrink: 0 }) }}>
       {photo ? (
-        <Img src={photo} />
+        <Img src={photo} grade={pal.accent} />
       ) : (
         <div style={{ position: "absolute", inset: 0 }}>
           <Scene location={ev.location} variant={seed} pal={pal} w="100%" h="100%" />
         </div>
       )}
-      <div style={{ position: "absolute", left: 36, top: 30, right: 36, color: photo ? "#fff" : pal.ink, textShadow: photo ? "0 2px 16px rgba(0,0,0,.55)" : "none" }}>
+      {photo && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(180deg, ${rgba(shadeOf(pal), Math.min(0.8, 0.35 + (photoStats(photo)?.top ?? 0.6) * 0.55))} 0%, ${rgba(shadeOf(pal), 0)} ${sq ? 55 : 45}%)`,
+          }}
+        />
+      )}
+      <div style={{ position: "absolute", left: 36, top: 30, right: 36, color: photo ? "#fff" : pal.ink, textShadow: photo ? "0 2px 12px rgba(0,0,0,.35)" : "none" }}>
         <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 44 : 58, fontWeight: 700, lineHeight: 1 }}>Greetings from</div>
         <div style={{ ...displayStyle(font, photo ? "#fff" : pal.ink), fontSize: sq ? 84 : story ? 150 : 120, lineHeight: 0.95 }}>{locName}</div>
       </div>
