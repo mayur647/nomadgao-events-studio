@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-moss: #26341f;
+  --color-moss-2: #3b4d2f;
+  --color-matcha: #cdd9a5;
+  --color-matcha-soft: #e7eccf;
+  --color-ground: #eef0e4;
+  --color-chili: #b8262a;
+  --color-saffron: #e59a2f;
+  --color-ink: #1f2a1c;
+  --color-mute: #5f6b57;
+  --color-line: #d6dbc6;
+  --font-sans: var(--f-outfit), system-ui, sans-serif;
+  --font-display: var(--f-bricolage), system-ui, sans-serif;
+  --font-hand: var(--f-caveat), cursive;
+}
+
+:root {
+  --f-outfit: "Outfit";
+  --f-bricolage: "Bricolage Grotesque";
+  --f-fraunces: "Fraunces";
+  --f-unbounded: "Unbounded";
+  --f-caprasimo: "Caprasimo";
+  --f-anton: "Anton";
+  --f-caveat: "Caveat";
+}
+
+html, body { background: var(--color-ground); color: var(--color-ink); }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+@utility card { @apply bg-white rounded-2xl border border-line; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer; }
+@utility btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-moss text-white hover:bg-moss-2; }
+@utility btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border border-line bg-white text-ink hover:bg-matcha-soft; }
+@utility btn-chili { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-chili text-white hover:opacity-90; }
+@utility btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
+@utility input { @apply w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15px] outline-none focus:border-moss focus:ring-2 focus:ring-matcha; }
+@utility label { @apply block text-sm font-semibold text-ink mb-1.5; }
+@utility hint { @apply text-xs text-mute mt-1; }
+@utility chip { @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium cursor-pointer select-none; }
+@utility chip-on { @apply bg-moss text-white border-moss; }
+
+:focus-visible { outline: 3px solid var(--color-saffron); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
