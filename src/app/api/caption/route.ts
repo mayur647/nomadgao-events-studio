@@ -45,10 +45,16 @@ function describe(e: EventRow & { rsvp_url?: string | null }) {
   return lines.filter(Boolean).join("\n");
 }
 
+/** Keys from AI Studio start with "AIza"; Google Cloud (Vertex AI express) keys start with "AQ." and use a different host. */
+const isVertexKey = (key: string) => key.startsWith("AQ.");
+
 async function callGemini(model: string, key: string, prompt: string) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+  const url = isVertexKey(key)
+    ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${encodeURIComponent(key)}`
+    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    headers: isVertexKey(key) ? { "Content-Type": "application/json" } : { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: VOICE }] },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -109,14 +115,19 @@ export async function POST(req: Request) {
     body.draft?.instagram?.slice(0, 600) ?? "",
   ].join("\n");
 
-  const preferred = process.env.GEMINI_MODEL || "gemini-flash-latest";
-  const models = [...new Set([preferred, "gemini-2.5-flash", "gemini-2.0-flash"])];
+  const preferred = process.env.GEMINI_MODEL || (isVertexKey(key) ? "gemini-2.5-flash" : "gemini-flash-latest");
+  const models = [...new Set([preferred, "gemini-2.5-flash", isVertexKey(key) ? "gemini-2.0-flash-001" : "gemini-2.0-flash"])];
   let last = "";
   for (const m of models) {
     try {
       const res = await callGemini(m, key, prompt);
-      if (res.status === 404) {
-        last = `Model ${m} not found`;
+      if (res.status === 404 || res.status === 400) {
+        const t = await res.text();
+        if (res.status === 400 && !/not found|not supported|model/i.test(t)) {
+          last = t.slice(0, 200);
+          break;
+        }
+        last = `Model ${m} not available`;
         continue;
       }
       const json = await res.json();
