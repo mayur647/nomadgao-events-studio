@@ -205,11 +205,19 @@ export function FitBlock({ children, style, origin = "top center", grow = 1 }: {
 }
 
 /* ───────────────────────── brand marks ───────────────────────── */
-export function Logos({ brands, dark, height = 64, gap = 22, color }: { brands: BrandId[]; dark: boolean; height?: number; gap?: number; color: string }) {
+export function Logos({ brands, dark, height = 64, gap = 22, color, plate }: { brands: BrandId[]; dark: boolean; height?: number; gap?: number; color: string; plate?: string }) {
   const hasN = brands.includes("nomadgao");
   const hasH = brands.includes("hotpot");
   return (
-    <div style={{ display: "flex", alignItems: "center", gap }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap,
+        // over artwork or photos the logos sit on a solid plate so they never disappear
+        ...(plate ? { background: plate, padding: `${height * 0.3}px ${height * 0.5}px`, borderRadius: height * 0.6, boxShadow: "0 4px 14px rgba(0,0,0,.12)" } : {}),
+      }}
+    >
       {hasH && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src="/brand/hotpot-house.png" alt="The Hotpot House" style={{ height: height * 1.35, width: height * 1.35, borderRadius: "50%", display: "block", boxShadow: `0 0 0 3px ${color}22` }} />

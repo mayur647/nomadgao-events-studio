@@ -383,7 +383,6 @@ function FullBleed({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) 
   const story = size === "story", sq = size === "square";
   const onPhoto = Boolean(photo);
   const fg = onPhoto ? "#FFFFFF" : pal.bg;
-  const headFg = onPhoto ? "#FFFFFF" : pal.ink;
   // Shade strength follows how bright the photo is where the text sits, in the palette's own dark tone.
   const st = photoStats(photo) ?? { top: 0.6, mid: 0.6, bottom: 0.6 };
   const shade = shadeOf(pal);
@@ -409,8 +408,8 @@ function FullBleed({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) 
         </>
       )}
       <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <Logos brands={ev.brands} dark={onPhoto ? true : pal.dark} height={sq ? 50 : 60} color={headFg} />
-        <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 40 : 50, fontWeight: 700, color: headFg }}>{placeName(ev.location)}</div>
+        <Logos brands={ev.brands} dark={pal.dark} height={sq ? 46 : 54} color={pal.ink} plate={pal.bg} />
+        <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 36 : 44, fontWeight: 700, color: pal.ink, background: pal.bg, padding: "4px 20px 8px", borderRadius: 30 }}>{placeName(ev.location)}</div>
       </div>
       <div
         style={{

@@ -72,7 +72,7 @@ function Timetable({ location, brands, week, events, size, w, h, pal, font, seed
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, transform: "scaleY(-1)", opacity: 0 }} />
         <Scene location={location} variant={seed} pal={pal} w={w} h={sceneH} hotpot={brands.includes("hotpot")} />
         <div style={{ position: "absolute", top: sq ? 40 : 56, left: sq ? 56 : 72 }}>
-          <Logos brands={brands} dark={pal.dark} height={sq ? 44 : 56} color={pal.ink} />
+          <Logos brands={brands} dark={pal.dark} height={sq ? 40 : 50} color={pal.ink} plate={pal.bg} />
         </div>
       </div>
       <div style={{ padding: sq ? "28px 56px 40px" : "44px 72px 56px", display: "flex", flexDirection: "column", flex: 1, minHeight: 0, gap: sq ? 18 : 26 }}>
