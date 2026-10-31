@@ -5,7 +5,7 @@ import { LOCATIONS } from "@/lib/constants";
 import { BODY_FONT, HAND_FONT, type FontSet, type Palette } from "@/lib/themes";
 import { weekRange } from "@/lib/format";
 import { Scene, Sparkle } from "./Art";
-import { FitBlock, FitText, Logos, displayStyle, type PosterEvent } from "./common";
+import { FitBlock, FitText, Logos, ScaleGroup, displayStyle, type PosterEvent } from "./common";
 
 export const CAL_TEMPLATES = ["timetable", "tiles", "list"] as const;
 export type CalTemplate = (typeof CAL_TEMPLATES)[number];
@@ -235,22 +235,22 @@ export interface JointProps {
   brands: BrandId[];
 }
 
-function MiniList({ events, pal, font, compact }: { events: PosterEvent[]; pal: Palette; font: FontSet; compact?: boolean }) {
+function MiniList({ events, pal, font, compact, s = 1 }: { events: PosterEvent[]; pal: Palette; font: FontSet; compact?: boolean; s?: number }) {
   const sorted = [...events].sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
   if (!sorted.length) return <Empty color={pal.ink} />;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 16 : 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: (compact ? 16 : 20) * s }}>
       {sorted.map((e) => (
-        <div key={e.id} style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
-          <div style={{ width: 118, flexShrink: 0, background: pal.paper, color: pal.paperInk, borderRadius: 16, textAlign: "center", padding: "8px 0" }}>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{e.dayShort}</div>
-            <div style={{ ...displayStyle(font, pal.paperInk), fontSize: 46, lineHeight: 1, textTransform: "none" }}>{e.dayNum}</div>
+        <div key={e.id} style={{ display: "flex", gap: 18 * s, alignItems: "center" }}>
+          <div style={{ width: 112 * s, flexShrink: 0, background: pal.paper, color: pal.paperInk, borderRadius: 16 * s, textAlign: "center", padding: `${8 * s}px 0` }}>
+            <div style={{ fontSize: 23 * s, fontWeight: 700 }}>{e.dayShort}</div>
+            <div style={{ ...displayStyle(font, pal.paperInk), fontSize: 44 * s, lineHeight: 1, textTransform: "none" }}>{e.dayNum}</div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1.1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 37 * s, fontWeight: 800, lineHeight: 1.1 }}>
               {e.emoji} {e.title}
             </div>
-            <div style={{ fontSize: 27, marginTop: 6, opacity: 0.9 }}>{[e.startTime, e.feeShort].filter(Boolean).join(" · ")}</div>
+            <div style={{ fontSize: 26 * s, marginTop: 6 * s, opacity: 0.9 }}>{[e.startTime, e.feeShort].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
       ))}
@@ -260,48 +260,61 @@ function MiniList({ events, pal, font, compact }: { events: PosterEvent[]; pal: 
 
 function Split({ week, goa, dharamkot, size, w, h, goaPal, dkPal, font, seed, brands }: JointProps) {
   const story = size === "story", sq = size === "square";
-  const head = story ? 330 : sq ? 210 : 250;
+  const head = story ? 340 : sq ? 200 : 250;
+  // one text size for both lists, chosen from the longer list, so the two halves match
+  const rows = Math.max(goa.length, dharamkot.length, 1);
+  const avail = ((h - head) / 2) - (sq ? 110 : 140);
+  const s = Math.max(0.55, Math.min(story ? 1.2 : 1.05, avail / (rows * 112)));
+  const artW = story ? 330 : sq ? 0 : 300;
   const section = (loc: LocationId, evs: PosterEvent[], pal: Palette, variant: number) => (
-    <div style={{ flex: 1, minHeight: 0, background: pal.bg, color: pal.ink, position: "relative", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ position: "absolute", right: -40, bottom: -10, width: 520, opacity: 0.9 }}>
-        <Scene location={loc} variant={variant} pal={pal} w={520} h={230} />
-      </div>
-      <div style={{ padding: sq ? "26px 52px 20px" : "36px 64px 28px", display: "flex", flexDirection: "column", gap: 16, flex: 1, minHeight: 0, position: "relative" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
-          <div style={{ ...displayStyle(font, pal.accent), fontSize: sq ? 58 : 72, lineHeight: 1 }}>{LOCATIONS[loc].name}</div>
-          <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 34 : 42, fontWeight: 700 }}>{loc === "goa" ? "Anjuna" : "Himachal"}</div>
+    <div style={{ flex: 1, minHeight: 0, background: pal.bg, color: pal.ink, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, minWidth: 0, padding: sq ? "24px 0 18px 52px" : "34px 0 26px 64px", display: "flex", flexDirection: "column", gap: sq ? 12 : 18 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
+          <div style={{ ...displayStyle(font, pal.accent), fontSize: sq ? 54 : 68, lineHeight: 1 }}>{LOCATIONS[loc].name}</div>
+          <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 32 : 40, fontWeight: 700 }}>{loc === "goa" ? "Anjuna" : "Himachal"}</div>
         </div>
-        <FitBlock origin="top left" grow={1.3}>
-          <div style={{ maxWidth: 700 }}>
-            <MiniList events={evs} pal={pal} font={font} compact={sq} />
-          </div>
+        <FitBlock origin="top left">
+          <MiniList events={evs} pal={pal} font={font} compact={sq} s={s} />
         </FitBlock>
       </div>
+      {artW > 0 ? (
+        <div style={{ width: artW, flexShrink: 0, margin: story ? "34px 40px 34px 28px" : "28px 40px 28px 24px", borderRadius: 28, overflow: "hidden" }}>
+          <Scene location={loc} variant={variant} pal={pal} w="100%" h="100%" />
+        </div>
+      ) : (
+        <div style={{ width: 52 }} />
+      )}
     </div>
   );
   const headPal = seed % 2 ? goaPal : dkPal;
   return (
     <div style={base(w, h, headPal, { background: "#FFFFFF" })}>
-      <div style={{ height: head, flexShrink: 0, background: headPal.paper, color: headPal.paperInk, padding: sq ? "36px 52px" : "52px 64px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-        <Logos brands={brands} dark={false} height={sq ? 42 : 54} color={headPal.paperInk} />
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20 }}>
-          <div style={{ ...displayStyle(font, headPal.paperInk), fontSize: story ? 110 : sq ? 70 : 86, lineHeight: 0.95 }}>This week at NomadGao</div>
-          <div style={{ fontWeight: 800, fontSize: sq ? 30 : 38, whiteSpace: "nowrap", background: headPal.paperInk, color: headPal.paper, padding: "10px 20px", borderRadius: 14 }}>{weekRange(week)}</div>
+      <div style={{ height: head, flexShrink: 0, background: headPal.paper, color: headPal.paperInk, padding: sq ? "34px 52px 26px" : "48px 64px 34px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20 }}>
+          <Logos brands={brands} dark={false} height={sq ? 42 : 52} color={headPal.paperInk} />
+          <div style={{ fontWeight: 800, fontSize: sq ? 28 : 34, whiteSpace: "nowrap", background: headPal.paperInk, color: headPal.paper, padding: "10px 20px", borderRadius: 14 }}>{weekRange(week)}</div>
         </div>
+        <FitText max={story ? 120 : sq ? 76 : 96} min={48} maxLines={story ? 2 : 1} lineHeight={0.98} style={{ ...displayStyle(font, headPal.paperInk), width: "100%" }}>
+          This week at NomadGao
+        </FitText>
       </div>
-      {section("goa", goa, goaPal, seed)}
-      {section("dharamkot", dharamkot, dkPal, seed + 1)}
+      <ScaleGroup>
+        {section("goa", goa, goaPal, seed)}
+        {section("dharamkot", dharamkot, dkPal, seed + 1)}
+      </ScaleGroup>
     </div>
   );
 }
 
 function Columns({ week, goa, dharamkot, size, w, h, goaPal, dkPal, font, seed, brands }: JointProps) {
   const story = size === "story", sq = size === "square";
+  const colRows = Math.max(goa.length, dharamkot.length, 1);
+  const colS = story ? Math.max(0.6, Math.min(1.05, 760 / ((goa.length + dharamkot.length || 1) * 116))) : Math.min(sq ? 0.75 : 0.85, (sq ? 440 : 600) / (colRows * 120));
   const stacked = story;
   const card = (loc: LocationId, evs: PosterEvent[], pal: Palette, variant: number) => (
-    <div style={{ flex: 1, minHeight: 0, minWidth: 0, background: pal.bg, color: pal.ink, borderRadius: 34, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      <div style={{ height: stacked ? 300 : sq ? 170 : 230, flexShrink: 0, position: "relative" }}>
-        <Scene location={loc} variant={variant} pal={pal} w="100%" h="100%" />
+    <div style={{ flex: stacked ? `${Math.max(evs.length, 1) + 2.2} 1 0` : 1, minHeight: 0, minWidth: 0, background: pal.bg, color: pal.ink, borderRadius: 34, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ height: stacked ? 230 : sq ? 170 : 230, flexShrink: 0, position: "relative" }}>
+        <Scene location={loc} variant={variant} pal={pal} w="100%" h="100%" band />
         <div style={{ position: "absolute", left: 24, top: 20, ...displayStyle(font, pal.ink), fontSize: sq ? 44 : 54, lineHeight: 1, background: pal.bg, padding: "8px 16px 10px", borderRadius: 14 }}>{LOCATIONS[loc].name}</div>
       </div>
       <div style={{ padding: sq ? "18px 24px 22px" : "24px 30px 30px", flex: 1, minHeight: 0, display: "flex" }}>
@@ -324,8 +337,10 @@ function Columns({ week, goa, dharamkot, size, w, h, goaPal, dkPal, font, seed, 
         one tribe.
       </div>
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: stacked ? "column" : "row", gap: sq ? 20 : 28 }}>
-        {card("goa", goa, goaPal, seed)}
-        {card("dharamkot", dharamkot, dkPal, seed + 2)}
+        <ScaleGroup>
+          {card("goa", goa, goaPal, seed)}
+          {card("dharamkot", dharamkot, dkPal, seed + 2)}
+        </ScaleGroup>
       </div>
       <Footer events={[...goa, ...dharamkot]} color="#1d1d1b" size={sq ? 22 : 26} />
     </div>

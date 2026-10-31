@@ -133,7 +133,7 @@ function Monk({ x, y, s, robe, shawl, skin }: { x: number; y: number; s: number;
   );
 }
 
-export function HimalayaScene({ variant, pal, w = 1080, h = 440 }: { variant: number; pal: Palette; w?: number | string; h?: number | string }) {
+export function HimalayaScene({ variant, pal, w = 1080, h = 440, band = false }: { variant: number; pal: Palette; w?: number | string; h?: number | string; band?: boolean }) {
   const t = tones(pal);
   const v = Math.abs(variant) % 3;
   const snow = pal.dark ? mix(pal.ink, "#ffffff", 0.3) : "#FFFFFF";
@@ -144,7 +144,7 @@ export function HimalayaScene({ variant, pal, w = 1080, h = 440 }: { variant: nu
     forestPines.push({ x, h: 46 + Math.abs(jit(i, 3)) * 46 + (ridgeY - 448) });
   }
   return (
-    <svg viewBox="0 0 1080 600" width={w} height={h} preserveAspectRatio="xMidYMax slice" style={{ display: "block" }}>
+    <svg viewBox={band ? "0 120 1080 480" : "0 0 1080 600"} width={w} height={h} preserveAspectRatio={band ? "xMidYMid slice" : "xMidYMax slice"} style={{ display: "block" }}>
       {v === 2 ? (
         <path d="M818 120 A44 44 0 1 0 862 178 A36 36 0 1 1 818 120 Z" fill={pal.accent} />
       ) : (
@@ -256,7 +256,7 @@ function Boat({ x, y, hull, sail }: { x: number; y: number; hull: string; sail: 
   );
 }
 
-export function GoaScene({ variant, pal, w = 1080, h = 440 }: { variant: number; pal: Palette; w?: number | string; h?: number | string }) {
+export function GoaScene({ variant, pal, w = 1080, h = 440, band = false }: { variant: number; pal: Palette; w?: number | string; h?: number | string; band?: boolean }) {
   const t = tones(pal);
   const v = Math.abs(variant) % 3;
   const horizon = 400;
@@ -266,7 +266,7 @@ export function GoaScene({ variant, pal, w = 1080, h = 440 }: { variant: number;
   const sunX = v === 1 ? 300 : 540;
   const sunR = v === 1 ? 120 : 150;
   return (
-    <svg viewBox="0 0 1080 600" width={w} height={h} preserveAspectRatio="xMidYMax slice" style={{ display: "block" }}>
+    <svg viewBox={band ? "0 120 1080 480" : "0 0 1080 600"} width={w} height={h} preserveAspectRatio={band ? "xMidYMid slice" : "xMidYMax slice"} style={{ display: "block" }}>
       {v === 2 ? (
         <circle cx={790} cy={170} r={58} fill={pal.accent} />
       ) : (
@@ -367,6 +367,7 @@ export function Scene({
   w = 1080,
   h = 440,
   hotpot = false,
+  band = false,
 }: {
   location: "goa" | "dharamkot";
   variant: number;
@@ -374,9 +375,11 @@ export function Scene({
   w?: number | string;
   h?: number | string;
   hotpot?: boolean;
+  /** wide, short strips: frame the horizon instead of the ground */
+  band?: boolean;
 }) {
   void hotpot;
-  return location === "goa" ? <GoaScene variant={variant} pal={pal} w={w} h={h} /> : <HimalayaScene variant={variant} pal={pal} w={w} h={h} />;
+  return location === "goa" ? <GoaScene variant={variant} pal={pal} w={w} h={h} band={band} /> : <HimalayaScene variant={variant} pal={pal} w={w} h={h} band={band} />;
 }
 
 /* ───────────────────────── Small ornaments ───────────────────────── */

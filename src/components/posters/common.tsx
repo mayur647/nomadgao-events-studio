@@ -1,5 +1,5 @@
 "use client";
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { BrandId, LocationId, SizeId } from "@/lib/constants";
 import { BRANDS, LOCATIONS, eventType } from "@/lib/constants";
 import type { Palette, FontSet } from "@/lib/themes";
@@ -139,12 +139,29 @@ export function FitText({
   );
 }
 
+/** Blocks inside one ScaleGroup all use the smallest scale any of them needs, so side-by-side lists match. */
+const ScaleCtx = createContext<{ report: (id: string, s: number) => void; min: number } | null>(null);
+export function ScaleGroup({ children }: { children: ReactNode }) {
+  const [scales, setScales] = useState<Record<string, number>>({});
+  const report = useCallback((id: string, v: number) => setScales((x) => (Math.abs((x[id] ?? -1) - v) < 0.004 ? x : { ...x, [id]: v })), []);
+  const vals = Object.values(scales);
+  const min = vals.length ? Math.min(...vals) : 1;
+  return <ScaleCtx.Provider value={{ report, min }}>{children}</ScaleCtx.Provider>;
+}
+
 /** A block that scales its content down to fit the space it is given. */
 export function FitBlock({ children, style, origin = "top center", grow = 1 }: { children: ReactNode; style?: CSSProperties; origin?: string; grow?: number }) {
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const fv = useFontsVersion();
-  const [scale, setScale] = useState(1);
+  const [own, setScale] = useState(1);
+  const group = useContext(ScaleCtx);
+  const gid = useId();
+  const scale = group ? Math.min(own, group.min) : own;
+  const report = group?.report;
+  useLayoutEffect(() => {
+    report?.(gid, own);
+  }, [report, gid, own]);
   useLayoutEffect(() => {
     const o = outer.current, i = inner.current;
     if (!o || !i) return;
@@ -172,7 +189,7 @@ export function FitBlock({ children, style, origin = "top center", grow = 1 }: {
     }
     s = Math.floor(s * 1000) / 1000;
     [i.style.transform, i.style.width, i.style.marginLeft] = prev;
-    if (Math.abs(s - scale) > 0.004) setScale(s);
+    if (Math.abs(s - own) > 0.004) setScale(s);
   });
   void fv;
   return (
