@@ -113,16 +113,23 @@ function Arch({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
         {title}
         {when}
         <div style={{ fontSize: story ? 32 : 28, opacity: 0.9, textAlign: "center" }}>📍 {ev.venue}</div>
-        <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-          <Pill bg={pal.ink} fg={pal.bg} size={story ? 34 : 30}>{ev.fee}</Pill>
-          <Badges items={ev.badges.slice(0, story ? 3 : 2)} color={pal.ink} size={story ? 26 : 24} />
-        </div>
-        {!story && qr && (
-          <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 26, fontWeight: 600 }}>
-            <QRBox qr={qr} size={120} style={{ padding: 10, borderRadius: 16 }} /> {ev.rsvp}
+        {!story && qr ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+            <QRBox qr={qr} size={112} style={{ padding: 8, borderRadius: 14 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-start" }}>
+              <Pill bg={pal.ink} fg={pal.bg} size={28}>{ev.fee}</Pill>
+              <div style={{ fontSize: 24, fontWeight: 600 }}>{ev.rsvp}</div>
+            </div>
           </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+              <Pill bg={pal.ink} fg={pal.bg} size={story ? 34 : 30}>{ev.fee}</Pill>
+              <Badges items={ev.badges.slice(0, story ? 3 : 2)} color={pal.ink} size={story ? 26 : 24} />
+            </div>
+            {!story && <div style={{ fontSize: 26, fontWeight: 600 }}>{ev.rsvp}</div>}
+          </>
         )}
-        {!story && !qr && <div style={{ fontSize: 26, fontWeight: 600 }}>{ev.rsvp}</div>}
       </div>
       {story && (
         <div style={{ position: "relative", height: sceneH, marginLeft: -72, marginRight: -72 }}>
