@@ -67,9 +67,9 @@ export default function RsvpPage({ params }: { params: Promise<{ id: string }> }
   return (
     <main className="min-h-screen" style={{ background: pal.bg, color: pal.ink }}>
       <div className="mx-auto max-w-xl">
-        <div className="px-5 pt-6 flex justify-between items-center">
-          <Logos brands={brands} dark={pal.dark} height={30} gap={12} color={pal.ink} />
-          <span className="font-hand text-2xl font-bold">{LOCATIONS[loc].place}</span>
+        <div className="px-5 pt-6 flex flex-wrap justify-between items-center gap-x-4 gap-y-2">
+          <Logos brands={brands} dark={pal.dark} height={24} gap={10} color={pal.ink} />
+          <span className="font-hand text-xl font-bold whitespace-nowrap">{LOCATIONS[loc].place}</span>
         </div>
         <div className="overflow-hidden">
           <Scene location={loc} variant={1} pal={pal} w={576} h={230} />
