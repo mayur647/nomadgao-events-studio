@@ -1,6 +1,17 @@
 # Weekly guide for community managers
 
-**Before Monday (Thu–Sun):** add next week's events.
+**Before Monday (Thu–Sun):** add next week's events, all at once or one by one.
+
+*All at once: **Import***. Pick the week, then use whichever is easiest:
+- ✍️ **Type or paste**: rough notes or a WhatsApp message.
+- 📷 **Photo of notes**: a clear photo of the whiteboard or notebook.
+- 🎙️ **Voice**: say each event in one go (name, day, time, place, price, RSVP).
+- 📊 **Excel / CSV**: upload the template (download it from the Import page).
+- 🟩 **Google Sheet**: keep the template in Google Sheets, share it as "Anyone with the link", paste the link.
+
+Everything lands in a **check** table: red must be fixed, yellow is worth a look (like "morning or evening?"). Untick anything you don't want, then **Add events**.
+
+*One by one:*
 1. Open the studio → **Events** → **+ Add an event**.
 2. Pick the location and tick the brands for the poster (NomadGao, The Hotpot House, or both).
 3. Fill in the name, type, date, time, venue, entry fee and RSVP. Write one good line in **Short description**; it shapes the caption.
