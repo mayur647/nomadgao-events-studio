@@ -41,7 +41,7 @@ export async function GET(req: Request) {
   const brand = url.searchParams.get("brand") as BrandId | null;
   const format = url.searchParams.get("format");
 
-  if (!SUPABASE_URL || !ANON) return Response.json({ error: "Feed not configured" }, { status: 503, headers: CORS });
+  if (!SUPABASE_URL || !ANON) return Response.json({ error: "Feed not configured" }, { status: 503, headers: { ...CORS, "Cache-Control": "no-store" } });
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/list_public_events`, {
     method: "POST",
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     body: JSON.stringify({ p_location: location, p_days: days }),
     next: { revalidate: 300 },
   });
-  if (!res.ok) return Response.json({ error: "Couldn't load events" }, { status: 502, headers: CORS });
+  if (!res.ok) return Response.json({ error: "Couldn't load events" }, { status: 502, headers: { ...CORS, "Cache-Control": "no-store" } });
   let rows = ((await res.json()) as Row[] | null) ?? [];
   if (brand && brand in BRANDS) rows = rows.filter((r) => r.brands?.includes(brand));
 
