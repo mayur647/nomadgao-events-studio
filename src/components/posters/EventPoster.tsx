@@ -270,7 +270,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   );
   const info = (
     <>
-      <Pill bg={pal.accent2} fg={pal.paper} size={story ? 32 : 26} style={{ alignSelf: sq ? "flex-start" : "center" }}>
+      <Pill bg={pal.accent2} fg={lum(pal.accent2) > 0.5 ? pal.paperInk : pal.paper} size={story ? 32 : 26} style={{ alignSelf: sq ? "flex-start" : "center" }}>
         {ev.emoji} {ev.typeName}
       </Pill>
       <FitText max={story ? 132 : sq ? 84 : 96} min={40} maxLines={sq ? 3 : 2} lineHeight={font.lineHeight} style={{ ...displayStyle(font, pal.ink), textAlign: sq ? "left" : "center", width: "100%" }}>
@@ -334,7 +334,7 @@ function BigDate({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
     <div style={root(w, h, pal, { padding: sq ? "56px 64px 0" : "64px 72px 0" })}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Logos brands={ev.brands} dark={pal.dark} height={sq ? 48 : 58} color={pal.ink} />
-        <Pill bg={pal.accent2} fg={pal.paper} size={sq ? 24 : 30}>{ev.emoji} {ev.typeName}</Pill>
+        <Pill bg={pal.accent2} fg={lum(pal.accent2) > 0.5 ? pal.paperInk : pal.paper} size={sq ? 24 : 30}>{ev.emoji} {ev.typeName}</Pill>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", paddingBottom: sq ? 8 : 24 }}>
       <div>
@@ -466,7 +466,7 @@ function Postcard({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const pi = pal.paperInk;
   const locName = ev.location === "goa" ? "Goa" : "Dharamkot";
   const picture = (
-    <div style={{ position: "relative", overflow: "hidden", background: pal.bg, borderRadius: 10, ...(sq ? { width: "46%", height: "100%" } : { height: story ? 820 : 520, flexShrink: 0 }) }}>
+    <div style={{ position: "relative", overflow: "hidden", background: pal.bg, borderRadius: 10, ...(sq ? { width: "46%", height: "100%" } : { height: story ? 760 : 420, flexShrink: 0 }) }}>
       {photo ? (
         <Img src={photo} grade={pal.accent} />
       ) : (
@@ -485,7 +485,9 @@ function Postcard({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
       )}
       <div style={{ position: "absolute", left: 36, top: 30, right: 36, color: photo ? "#fff" : pal.ink, textShadow: photo ? "0 2px 12px rgba(0,0,0,.35)" : "none" }}>
         <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 44 : 58, fontWeight: 700, lineHeight: 1 }}>Greetings from</div>
-        <div style={{ ...displayStyle(font, photo ? "#fff" : pal.ink), fontSize: sq ? 84 : story ? 150 : 120, lineHeight: 0.95 }}>{locName}</div>
+        <FitText max={sq ? 84 : story ? 150 : 120} min={40} maxLines={1} lineHeight={0.95} style={{ ...displayStyle(font, photo ? "#fff" : pal.ink), width: "100%" }}>
+          {locName}
+        </FitText>
       </div>
     </div>
   );
@@ -525,7 +527,7 @@ function Postcard({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
           <div key={l} style={{ borderBottom: `2.5px solid ${pi}55`, paddingBottom: 6, fontSize: sq ? 25 : story ? 34 : 29, fontWeight: 600, color: pi, lineHeight: 1.15 }}>{l}</div>
         ))}
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: "auto" }}>
-          {qr && <QRBox qr={qr} size={sq ? 100 : story ? 150 : 120} style={{ boxShadow: "none", padding: 6, borderRadius: 10 }} />}
+          {qr && <QRBox qr={qr} size={sq ? 96 : story ? 150 : 104} style={{ boxShadow: "none", padding: 6, borderRadius: 10 }} />}
           <div style={{ fontSize: sq ? 20 : 24, fontWeight: 700, color: pi }}>{ev.rsvp}</div>
         </div>
       </div>

@@ -126,7 +126,7 @@ export function FitText({
     if (!el) return;
     let s = max;
     el.style.fontSize = `${s}px`;
-    while (s > min && (el.scrollHeight > maxLines * lineHeight * s + 4 || el.scrollWidth > el.clientWidth + 2)) {
+    while (s > min && (el.scrollHeight > maxLines * lineHeight * s + s * 0.3 + 4 || el.scrollWidth > el.clientWidth + 2)) {
       s -= 2;
       el.style.fontSize = `${s}px`;
     }
