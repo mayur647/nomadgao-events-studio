@@ -156,7 +156,7 @@ export default function EventsPage() {
                       </div>
                     </td>
                     <td className="p-3">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${e.location === "goa" ? "bg-[#F6DFC0] text-[#7a3a1a]" : "bg-[#d8e3dc] text-[#1E3A31]"}`}>{LOCATIONS[e.location].name}</span>
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${e.location === "goa" ? "bg-goa text-goa-ink" : "bg-dharamkot text-dharamkot-ink"}`}>{LOCATIONS[e.location].name}</span>
                       <div className="text-mute mt-1">{e.venue}{e.spot ? ` · ${e.spot}` : ""}</div>
                     </td>
                     <td className="p-3 whitespace-nowrap">{feeShort(e)}</td>

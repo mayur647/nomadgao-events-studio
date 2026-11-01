@@ -1,4 +1,5 @@
 "use client";
+import { posterNeutrals as N } from "@/brand/brand";
 import type { CSSProperties } from "react";
 import { eventType } from "@/lib/constants";
 import { BODY_FONT, HAND_FONT, type Palette } from "@/lib/themes";
@@ -50,8 +51,8 @@ function Img({ src, style, grade, position = "50% 38%" }: { src: string; style?:
 
 /** A dark colour from the palette to shade photos behind text (falls back to near-black). */
 function shadeOf(pal: Palette) {
-  const c = lum(pal.bg) < 0.25 ? pal.bg : lum(pal.ink) < 0.25 ? pal.ink : lum(pal.paperInk) < 0.25 ? pal.paperInk : "#111417";
-  return mix(c, "#000000", 0.25);
+  const c = lum(pal.bg) < 0.25 ? pal.bg : lum(pal.ink) < 0.25 ? pal.ink : lum(pal.paperInk) < 0.25 ? pal.paperInk : N.shadeFallback;
+  return mix(c, N.black, 0.25);
 }
 const rgba = (hexc: string, a: number) => {
   const h = hexc.replace("#", "");
@@ -253,7 +254,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const box = story ? 780 : sq ? 420 : 520;
   const pol = (
     <div style={{ position: "relative", transform: `rotate(${tilt}deg)`, flexShrink: 0 }}>
-      <div style={{ background: "#FFFEFA", padding: sq ? "22px 22px 20px" : "30px 30px 28px", boxShadow: "0 26px 50px rgba(0,0,0,.28)", width: box + (sq ? 44 : 60) }}>
+      <div style={{ background: N.polaroidPaper, padding: sq ? "22px 22px 20px" : "30px 30px 28px", boxShadow: "0 26px 50px rgba(0,0,0,.28)", width: box + (sq ? 44 : 60) }}>
         <div style={{ width: box, height: story ? box * 0.95 : box * 0.85, overflow: "hidden", background: pal.bg, position: "relative" }}>
           {photo ? (
             <Img src={photo} grade={pal.accent} />
@@ -261,7 +262,7 @@ function Polaroid({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
             <Scene location={ev.location} variant={seed} pal={pal} w="100%" h="100%" />
           )}
         </div>
-        <FitText max={story ? 64 : sq ? 40 : 50} min={28} maxLines={2} lineHeight={1.05} style={{ fontFamily: HAND_FONT, fontWeight: 700, color: "#2b2b2b", textAlign: "center", width: "100%", marginTop: 14 }}>
+        <FitText max={story ? 64 : sq ? 40 : 50} min={28} maxLines={2} lineHeight={1.05} style={{ fontFamily: HAND_FONT, fontWeight: 700, color: N.polaroidInk, textAlign: "center", width: "100%", marginTop: 14 }}>
           {hook}
         </FitText>
       </div>
@@ -382,7 +383,7 @@ function BigDate({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
 function FullBleed({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
   const story = size === "story", sq = size === "square";
   const onPhoto = Boolean(photo);
-  const fg = onPhoto ? "#FFFFFF" : pal.bg;
+  const fg = onPhoto ? N.white : pal.bg;
   // Shade strength follows how bright the photo is where the text sits, in the palette's own dark tone.
   const st = photoStats(photo) ?? { top: 0.6, mid: 0.6, bottom: 0.6 };
   const shade = shadeOf(pal);
@@ -483,9 +484,9 @@ function Postcard({ ev, size, w, h, pal, font, seed, photo, qr }: PosterProps) {
           }}
         />
       )}
-      <div style={{ position: "absolute", left: 36, top: 30, right: 36, color: photo ? "#fff" : pal.ink, textShadow: photo ? "0 2px 12px rgba(0,0,0,.35)" : "none" }}>
+      <div style={{ position: "absolute", left: 36, top: 30, right: 36, color: photo ? N.white : pal.ink, textShadow: photo ? "0 2px 12px rgba(0,0,0,.35)" : "none" }}>
         <div style={{ fontFamily: HAND_FONT, fontSize: sq ? 44 : 58, fontWeight: 700, lineHeight: 1 }}>Greetings from</div>
-        <FitText max={sq ? 84 : story ? 150 : 120} min={40} maxLines={1} lineHeight={0.95} style={{ ...displayStyle(font, photo ? "#fff" : pal.ink), width: "100%" }}>
+        <FitText max={sq ? 84 : story ? 150 : 120} min={40} maxLines={1} lineHeight={0.95} style={{ ...displayStyle(font, photo ? N.white : pal.ink), width: "100%" }}>
           {locName}
         </FitText>
       </div>

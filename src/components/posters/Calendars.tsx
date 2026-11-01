@@ -1,4 +1,5 @@
 "use client";
+import { posterNeutrals as N } from "@/brand/brand";
 import type { CSSProperties } from "react";
 import type { BrandId, LocationId, SizeId } from "@/lib/constants";
 import { LOCATIONS } from "@/lib/constants";
@@ -288,7 +289,7 @@ function Split({ week, goa, dharamkot, size, w, h, goaPal, dkPal, font, seed, br
   );
   const headPal = seed % 2 ? goaPal : dkPal;
   return (
-    <div style={base(w, h, headPal, { background: "#FFFFFF" })}>
+    <div style={base(w, h, headPal, { background: N.white })}>
       <div style={{ height: head, flexShrink: 0, background: headPal.paper, color: headPal.paperInk, padding: sq ? "34px 52px 26px" : "48px 64px 34px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20 }}>
           <Logos brands={brands} dark={false} height={sq ? 42 : 52} color={headPal.paperInk} />
@@ -324,14 +325,14 @@ function Columns({ week, goa, dharamkot, size, w, h, goaPal, dkPal, font, seed, 
       </div>
     </div>
   );
-  const bg = "#F2EFE6";
+  const bg = N.jointBg;
   return (
-    <div style={{ ...base(w, h, goaPal), background: bg, color: "#1d1d1b", padding: sq ? "44px 44px 36px" : "60px 60px 48px", gap: sq ? 22 : 32 }}>
+    <div style={{ ...base(w, h, goaPal), background: bg, color: N.jointInk, padding: sq ? "44px 44px 36px" : "60px 60px 48px", gap: sq ? 22 : 32 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Logos brands={brands} dark={false} height={sq ? 42 : 54} color="#1d1d1b" />
+        <Logos brands={brands} dark={false} height={sq ? 42 : 54} color={N.jointInk} />
         <div style={{ fontWeight: 800, fontSize: sq ? 28 : 34 }}>{weekRange(week)}</div>
       </div>
-      <div style={{ ...displayStyle(font, "#1d1d1b"), fontSize: story ? 120 : sq ? 70 : 92, lineHeight: 0.95 }}>
+      <div style={{ ...displayStyle(font, N.jointInk), fontSize: story ? 120 : sq ? 70 : 92, lineHeight: 0.95 }}>
         Two places,
         <br />
         one tribe.
@@ -342,7 +343,7 @@ function Columns({ week, goa, dharamkot, size, w, h, goaPal, dkPal, font, seed, 
           {card("dharamkot", dharamkot, dkPal, seed + 2)}
         </ScaleGroup>
       </div>
-      <Footer events={[...goa, ...dharamkot]} color="#1d1d1b" size={sq ? 22 : 26} />
+      <Footer events={[...goa, ...dharamkot]} color={N.jointInk} size={sq ? 22 : 26} />
     </div>
   );
 }

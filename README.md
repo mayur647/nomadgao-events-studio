@@ -75,8 +75,34 @@ npm run dev
 
 ## Changing things
 - Venues, event types, hooks, hashtags: `src/lib/constants.ts`
-- Palettes and fonts: `src/lib/themes.ts`
+- **All colours, fonts and logos: `src/brand/brand.ts`** (font files: `src/brand/fonts.ts`)
+- How posters pick a palette/font: `src/lib/themes.ts`
 - Line art: `src/components/posters/Art.tsx`
 - Poster layouts: `src/components/posters/EventPoster.tsx`, `Calendars.tsx`
 - Caption templates: `src/lib/captions.ts`; AI voice: `src/app/api/caption/route.ts`
 - Logos: `public/brand/`
+
+## Joining the NomadGao website later
+
+**Design.** Every colour, typeface and logo the Studio uses (app screens *and* posters) lives in
+`src/brand/brand.ts`. When the website's design system exists, map its tokens onto that file:
+`ui` for the app, `palettes`/`hotpotPalettes` for posters, `fonts` + `fontSets` for type, `logos`
+for files. Nothing else needs editing for a colour/type change. A new *visual style* (different
+shapes, illustration, grid) means redrawing the layouts in `src/components/posters/`.
+
+**Public events feed.** Run `supabase/migrations/003_public_feed.sql` once, then any website can read:
+
+| URL | Returns |
+|---|---|
+| `/api/public/events` | JSON of the next 60 days, both locations |
+| `?location=goa` or `?location=dharamkot` | one location |
+| `?days=14` | a shorter window (1–366) |
+| `?brand=hotpot` | only Hotpot House events |
+| `?format=ics` | a calendar people can subscribe to in Google/Apple Calendar |
+
+Open to any site (CORS `*`), cached 5 minutes, residents-only events and all guest/team data
+left out. Each event includes its fee label, venue, RSVP link (our form, a link, or WhatsApp) and
+spots left, so the website can link straight to `/rsvp/<id>`.
+
+**Hosting.** Either merge this Next.js app into the website (if it's Next.js) as `/studio`, or keep
+it separate at `studio.nomadgao.com` sharing the same Supabase database.

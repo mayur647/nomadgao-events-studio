@@ -1,4 +1,5 @@
 "use client";
+import { posterNeutrals as N } from "@/brand/brand";
 import { useEffect, useState } from "react";
 import type { Palette } from "@/lib/themes";
 
@@ -56,7 +57,7 @@ function Birds({ x, y, color, s = 1 }: { x: number; y: number; color: string; s?
   );
 }
 
-const FLAG_COLORS = ["#2C58A6", "#F7F4EC", "#C8372D", "#3F8A4E", "#F2C14E"];
+const FLAG_COLORS = N.prayerFlags;
 function PrayerFlags({ a, b, sag, n, line }: { a: P; b: P; sag: number; n: number; line: string }) {
   const c: P = [(a[0] + b[0]) / 2, Math.max(a[1], b[1]) + sag];
   const q = (t: number): P => [
@@ -136,7 +137,7 @@ function Monk({ x, y, s, robe, shawl, skin }: { x: number; y: number; s: number;
 export function HimalayaScene({ variant, pal, w = 1080, h = 440, band = false }: { variant: number; pal: Palette; w?: number | string; h?: number | string; band?: boolean }) {
   const t = tones(pal);
   const v = Math.abs(variant) % 3;
-  const snow = pal.dark ? mix(pal.ink, "#ffffff", 0.3) : "#FFFFFF";
+  const snow = pal.dark ? mix(pal.ink, N.white, 0.3) : N.white;
   const forestPines: { x: number; h: number }[] = [];
   for (let i = 0; i < 46; i++) {
     const x = i * 24 + jit(i) * 10;
@@ -179,8 +180,8 @@ export function HimalayaScene({ variant, pal, w = 1080, h = 440, band = false }:
           <Birds x={420} y={140} color={t.forest} />
         </>
       )}
-      {v === 1 && <Monk x={470} y={526} s={1.1} robe={pal.accent2} shawl={mix(pal.accent2, "#000000", 0.25)} skin={t.dark} />}
-      {v === 0 && <Monk x={560} y={528} s={1.1} robe={pal.accent2} shawl={mix(pal.accent2, "#000000", 0.25)} skin={t.dark} />}
+      {v === 1 && <Monk x={470} y={526} s={1.1} robe={pal.accent2} shawl={mix(pal.accent2, N.black, 0.25)} skin={t.dark} />}
+      {v === 0 && <Monk x={560} y={528} s={1.1} robe={pal.accent2} shawl={mix(pal.accent2, N.black, 0.25)} skin={t.dark} />}
       <path d="M0 572 C300 560 700 584 1080 566 V600 H0 Z" fill={t.dark} />
     </svg>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { logos } from "@/brand/brand";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isConfigured, sb } from "@/lib/supabase";
@@ -72,7 +73,7 @@ export default function LoginPage() {
     <main className="min-h-screen grid lg:grid-cols-2">
       <section className="bg-moss text-white p-8 sm:p-12 flex flex-col justify-between gap-10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/nomadgao-white.png" alt="NomadGao" className="h-9 w-auto self-start" />
+        <img src={logos.nomadgaoOnDark} alt="NomadGao" className="h-9 w-auto self-start" />
         <div>
           <p className="font-hand text-4xl text-matcha mb-2">events studio</p>
           <h1 className="font-display text-4xl sm:text-5xl font-extrabold leading-[1.05] max-w-md">Fill the form once. Get every poster, calendar and caption for the week.</h1>
@@ -80,7 +81,7 @@ export default function LoginPage() {
         </div>
         <div className="flex items-center gap-4 text-white/60 text-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/hotpot-house.png" alt="The Hotpot House" className="h-12 w-12 rounded-full" />
+          <img src={logos.hotpot} alt="The Hotpot House" className="h-12 w-12 rounded-full" />
           Anjuna · Dharamkot
         </div>
       </section>

@@ -1,4 +1,5 @@
 "use client";
+import { posterNeutrals as N, logos } from "@/brand/brand";
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { BrandId, LocationId, SizeId } from "@/lib/constants";
 import { BRANDS, LOCATIONS, eventType } from "@/lib/constants";
@@ -220,12 +221,12 @@ export function Logos({ brands, dark, height = 64, gap = 22, color, plate }: { b
     >
       {hasH && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src="/brand/hotpot-house.png" alt="The Hotpot House" style={{ height: height * 1.35, width: height * 1.35, borderRadius: "50%", display: "block", boxShadow: `0 0 0 3px ${color}22` }} />
+        <img src={logos.hotpot} alt="The Hotpot House" style={{ height: height * 1.35, width: height * 1.35, borderRadius: "50%", display: "block", boxShadow: `0 0 0 3px ${color}22` }} />
       )}
       {hasH && hasN && <span style={{ fontFamily: BODY_FONT, fontSize: height * 0.55, fontWeight: 300, color, opacity: 0.8 }}>×</span>}
       {hasN && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={dark ? "/brand/nomadgao-white.png" : "/brand/nomadgao-dark.png"} alt="NomadGao" style={{ height: height, width: (height * 800) / 208, display: "block" }} />
+        <img src={dark ? logos.nomadgaoOnDark : logos.nomadgaoOnLight} alt="NomadGao" style={{ height: height, width: height * logos.nomadgaoRatio, display: "block" }} />
       )}
     </div>
   );
@@ -264,7 +265,7 @@ export function Pill({ children, bg, fg, size = 30, style }: { children: ReactNo
   );
 }
 
-export function QRBox({ qr, size = 210, label, bg = "#fff", fg = "#111", style }: { qr: string; size?: number; label?: string; bg?: string; fg?: string; style?: CSSProperties }) {
+export function QRBox({ qr, size = 210, label, bg = N.qrBg, fg = N.qrInk, style }: { qr: string; size?: number; label?: string; bg?: string; fg?: string; style?: CSSProperties }) {
   return (
     <div style={{ background: bg, borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, boxShadow: "0 10px 30px rgba(0,0,0,.18)", ...style }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}

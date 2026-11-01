@@ -1,4 +1,5 @@
 "use client";
+import { logos } from "@/brand/brand";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
@@ -53,7 +54,7 @@ export function Shell({ children, adminOnly = false, wide = false }: { children:
         <div className={`mx-auto ${wide ? "max-w-7xl" : "max-w-5xl"} px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2`}>
           <Link href="/" className="flex items-center gap-3 mr-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/nomadgao-white.png" alt="NomadGao" className="h-6 w-auto" />
+            <img src={logos.nomadgaoOnDark} alt="NomadGao" className="h-6 w-auto" />
             <span className="font-hand text-2xl text-matcha leading-none">events studio</span>
           </Link>
           <nav className="flex flex-wrap gap-1 text-sm">

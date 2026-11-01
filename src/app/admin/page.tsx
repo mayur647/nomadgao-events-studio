@@ -290,7 +290,7 @@ function People() {
         </div>
       )}
       {pending.length > 0 && (
-        <div className="card p-4 border-saffron bg-[#fff8ec]">
+        <div className="card p-4 border-saffron bg-notice">
           <h2 className="font-semibold">{pending.length} waiting for approval</h2>
           <p className="text-sm text-mute">Set them to Community manager (or Admin) and pick their location.</p>
         </div>

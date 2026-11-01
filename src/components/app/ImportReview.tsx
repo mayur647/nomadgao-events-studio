@@ -117,7 +117,7 @@ function Row({ d, ctx, onChange, onRemove }: { d: Draft; ctx: ImportContext; onC
         ))}
         {d.duplicateOf && <span className="rounded-full bg-ink text-white text-xs px-2 py-0.5">Already in the calendar</span>}
         {d.issues.map((i, k) => (
-          <span key={k} className={`rounded-full text-xs px-2 py-0.5 ${i.level === "error" ? "bg-chili text-white" : "bg-[#fbe7c6] text-[#6b4210]"}`}>
+          <span key={k} className={`rounded-full text-xs px-2 py-0.5 ${i.level === "error" ? "bg-chili text-white" : "bg-warn text-warn-ink"}`}>
             {i.msg}
           </span>
         ))}
