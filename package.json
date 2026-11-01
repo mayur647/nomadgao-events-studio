@@ -20,17 +20,22 @@
     "html-to-image": "1.11.13",
     "jszip": "3.10.2",
     "next": "15.5.28",
+    "papaparse": "^5.7.0",
     "qrcode": "1.5.4",
     "react": "19.1.10",
-    "react-dom": "19.1.10"
+    "react-dom": "19.1.10",
+    "read-excel-file": "^9.3.14",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.15.0",
+    "@types/papaparse": "^5.5.2",
     "@types/qrcode": "1.5.5",
     "@types/react": "19.1.8",
     "@types/react-dom": "19.1.6",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.20.3",
     "typescript": "5.9.3"
   }
 }

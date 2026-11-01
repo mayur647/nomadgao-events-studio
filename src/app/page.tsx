@@ -193,7 +193,8 @@ export default function StudioPage() {
           <p className="font-hand text-3xl text-moss">no events this week yet</p>
           <p className="text-mute mt-1 mb-5">Add the week&apos;s events and every poster, calendar and caption appears here.</p>
           <div className="flex gap-3 justify-center">
-            <Link href="/events/new" className="btn-primary">+ Add an event</Link>
+            <Link href="/import" className="btn-primary">Import the week</Link>
+            <Link href="/events/new" className="btn-ghost">+ Add one event</Link>
             <Link href="/samples" className="btn-ghost">See sample posters</Link>
           </div>
         </div>

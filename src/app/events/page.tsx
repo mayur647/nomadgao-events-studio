@@ -80,6 +80,9 @@ export default function EventsPage() {
           <h1 className="font-display text-3xl font-extrabold">Events</h1>
           <p className="text-mute text-sm">Everything both locations have planned, in one list.</p>
         </div>
+        <Link href="/import" className="btn-ghost">
+          Import a week
+        </Link>
         <Link href="/events/new" className="btn-primary">
           + Add an event
         </Link>

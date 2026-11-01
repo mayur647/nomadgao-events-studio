@@ -8,6 +8,7 @@ import { isStaff, useAuth } from "./Auth";
 const NAV = [
   { href: "/", label: "Studio" },
   { href: "/events", label: "Events" },
+  { href: "/import", label: "Import" },
   { href: "/gallery", label: "Photo gallery" },
   { href: "/admin", label: "Admin", admin: true },
 ];

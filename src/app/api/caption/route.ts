@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { requireStaff } from "@/lib/serverAuth";
+import { GeminiError, geminiJSON } from "@/lib/gemini";
 import { BRANDS, COMMUNITY_TAG, LOCATIONS, eventType, type BrandId, type LocationId } from "@/lib/constants";
 import { dateShort, dayName, feeText, timeRange, venueLine } from "@/lib/format";
 import type { EventRow } from "@/lib/types";
@@ -45,46 +46,10 @@ function describe(e: EventRow & { rsvp_url?: string | null }) {
   return lines.filter(Boolean).join("\n");
 }
 
-/** Keys from AI Studio start with "AIza"; Google Cloud (Vertex AI express) keys start with "AQ." and use a different host. */
-const isVertexKey = (key: string) => key.startsWith("AQ.");
-
-async function callGemini(model: string, key: string, prompt: string) {
-  const url = isVertexKey(key)
-    ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${encodeURIComponent(key)}`
-    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: isVertexKey(key) ? { "Content-Type": "application/json" } : { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: VOICE }] },
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.9,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: { instagram: { type: "STRING" }, whatsapp: { type: "STRING" }, community: { type: "STRING" } },
-          required: ["instagram", "whatsapp", "community"],
-        },
-      },
-    }),
-  });
-  return res;
-}
-
 export async function POST(req: Request) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return NextResponse.json({ error: "AI captions aren't set up yet. Add GEMINI_API_KEY in Vercel. The template captions still work." }, { status: 503 });
-
-  // Only signed-in, approved team members can use the AI.
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!, anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  if (!token || !url || !anon) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
-  const supa = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } });
-  const { data: u } = await supa.auth.getUser(token);
-  if (!u.user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
-  const { data: prof } = await supa.from("profiles").select("role").eq("id", u.user.id).maybeSingle();
-  if (!prof || !["admin", "manager"].includes(prof.role)) return NextResponse.json({ error: "Your account isn't approved yet." }, { status: 403 });
+  const auth = await requireStaff(req);
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const { supa, user } = auth;
 
   const body = (await req.json()) as {
     kind: "event" | "location" | "joint";
@@ -115,38 +80,24 @@ export async function POST(req: Request) {
     body.draft?.instagram?.slice(0, 600) ?? "",
   ].join("\n");
 
-  const preferred = process.env.GEMINI_MODEL || (isVertexKey(key) ? "gemini-2.5-flash" : "gemini-flash-latest");
-  const models = [...new Set([preferred, "gemini-2.5-flash", isVertexKey(key) ? "gemini-2.0-flash-001" : "gemini-2.0-flash"])];
-  let last = "";
-  for (const m of models) {
+  try {
+    const { data, model } = await geminiJSON<{ instagram: string; whatsapp: string; community: string }>({
+      system: VOICE,
+      parts: [{ text: prompt }],
+      temperature: 0.9,
+      schema: {
+        type: "OBJECT",
+        properties: { instagram: { type: "STRING" }, whatsapp: { type: "STRING" }, community: { type: "STRING" } },
+        required: ["instagram", "whatsapp", "community"],
+      },
+    });
+    if (!data.instagram || !data.whatsapp || !data.community) throw new GeminiError("The AI gave an incomplete answer. Try again.");
     try {
-      const res = await callGemini(m, key, prompt);
-      if (res.status === 404 || res.status === 400) {
-        const t = await res.text();
-        if (res.status === 400 && !/not found|not supported|model/i.test(t)) {
-          last = t.slice(0, 200);
-          break;
-        }
-        last = `Model ${m} not available`;
-        continue;
-      }
-      const json = await res.json();
-      if (!res.ok) {
-        last = json?.error?.message ?? `Gemini error ${res.status}`;
-        if (res.status === 429) break;
-        continue;
-      }
-      const text: string = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
-      const parsed = JSON.parse(text);
-      if (!parsed.instagram || !parsed.whatsapp || !parsed.community) throw new Error("Incomplete answer");
-      try {
-        await supa.from("generations").insert({ user_id: u.user.id, kind: "caption_ai", action: "ai", location: body.location, template: m, count: 1 });
-      } catch {}
-      return NextResponse.json({ captions: parsed, model: m });
-    } catch (e) {
-      last = (e as Error).message;
-    }
+      await supa.from("generations").insert({ user_id: user.id, kind: "caption_ai", action: "ai", location: body.location, template: model, count: 1 });
+    } catch {}
+    return NextResponse.json({ captions: data, model });
+  } catch (e) {
+    const err = e as GeminiError;
+    return NextResponse.json({ error: err.message }, { status: err.status ?? 502 });
   }
-  const friendly = /quota|429|rate/i.test(last) ? "The free Gemini limit is used up for now. Try again in a minute, or use the template captions." : `AI captions failed: ${last}`;
-  return NextResponse.json({ error: friendly }, { status: 502 });
 }
