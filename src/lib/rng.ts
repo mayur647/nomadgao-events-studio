@@ -19,7 +19,8 @@ export function rng(seed: number) {
   };
 }
 export function pick<T>(arr: readonly T[], seed: number): T {
-  return arr[seed % arr.length];
+  const n = arr.length;
+  return arr[((Math.floor(seed) % n) + n) % n];
 }
 export function shuffled<T>(arr: readonly T[], seed: number): T[] {
   const r = rng(seed);

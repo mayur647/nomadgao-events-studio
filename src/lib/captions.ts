@@ -1,6 +1,7 @@
 import { BRANDS, COMMUNITY_TAG, LOCATIONS, eventType, type BrandId, type LocationId } from "./constants";
 import { dateShort, dayName, feeText, rsvpUrl, timeRange, venueLine, weekRange } from "./format";
 import { hash, pick } from "./rng";
+import { voice, WEEK } from "./voice";
 import type { EventRow } from "./types";
 
 export type Channel = "instagram" | "whatsapp" | "community";
@@ -39,71 +40,99 @@ function extras(e: EventRow) {
   return out;
 }
 
+/** "" = paragraph break; null/false/undefined = optional line left out. */
+const join = (lines: (string | null | false | undefined)[]) =>
+  lines
+    .filter((l): l is string => typeof l === "string")
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
 export function eventCaptions(e: EventRow, origin: string, seed = 0): Captions {
   const t = eventType(e.event_type);
   const loc = LOCATIONS[e.location];
   const s = hash(e.id, seed);
-  const hello = pick(loc.greeting, s);
+  const brands = e.brands?.length ? e.brands : (["nomadgao"] as BrandId[]);
+  const hotpotOnly = brands.includes("hotpot") && !brands.includes("nomadgao");
+  const residents = e.audience === "residents";
+  const hello = hotpotOnly ? "Hello from The Hotpot House 🍲" : pick(loc.greeting, s);
   const hook = pick(t.hooks, s >> 3);
+  const stories = voice.story(t.slug);
+  const place = pick(voice.place(e.location, e.start_time), s >> 5);
+  const welcome = voice.welcome(residents);
+  const signoffs = voice.signoff(e.location, hotpotOnly);
   const when = `${dayName(e.event_date)}, ${dateShort(e.event_date)}${timeRange(e) ? ` · ${timeRange(e)}` : ""}`;
   const where = venueLine(e);
   const fee = feeText(e) + (e.fee_note && e.fee_type !== "custom" ? ` (${e.fee_note})` : "");
   const url = rsvpUrl(e, origin);
-  const desc = e.description?.trim();
+  const desc = e.description?.trim().replace(/([^.!?])$/, "$1.");
   const ex = extras(e);
-  const brands = e.brands?.length ? e.brands : (["nomadgao"] as BrandId[]);
   const handles = brands.map((b) => BRANDS[b].handle).join(" ");
+  const host = e.host ? `${e.host} is hosting, and they'd love to meet you.` : "";
 
-  let igRsvp = "Just walk in, everyone's welcome.";
-  if (e.rsvp_mode === "form" || e.rsvp_mode === "link") igRsvp = e.limited_seats ? "Spots are limited. RSVP via the link in our bio or DM us." : "RSVP via the link in our bio or DM us.";
+  let igRsvp = "No RSVP needed, just turn up.";
+  if (e.rsvp_mode === "form" || e.rsvp_mode === "link") igRsvp = e.limited_seats ? "Spots are limited, so RSVP via the link in our bio or DM us to save yours." : "RSVP via the link in our bio or DM us so we know you're coming.";
   if (e.rsvp_mode === "phone") igRsvp = `RSVP on WhatsApp: ${e.rsvp_phone}`;
 
-  const instagram = [
-    `${t.emoji} ${e.name}`,
+  const instagram = join([
+    `${t.emoji} ${e.name.toUpperCase()}`,
     "",
-    `${hello} ${hook}${desc ? ` ${desc}` : ""}`,
+    `${hello} ${hook}`,
+    "",
+    [desc, pick(stories, s >> 7)].filter(Boolean).join(" "),
+    "",
+    `${place} ${pick(welcome, s >> 9)}`,
     "",
     `🗓 ${when}`,
     `📍 ${where}`,
     `🎟 ${fee}`,
-    ...ex.slice(0, 3),
+    ...ex.filter((x) => !x.startsWith("👋") && !x.startsWith("🏡") && !x.startsWith("🙋")),
+    host && `🙋 ${host}`,
     "",
-    igRsvp,
+    `${igRsvp} ${pick(signoffs, s >> 11)}`,
     "",
-    `${handles}`,
+    handles,
     hashtags(e.location, brands, e.event_type, s),
-  ].join("\n");
+  ]);
 
   let waRsvp = "No RSVP needed, just come by 🙌";
-  if (url && e.rsvp_mode !== "phone") waRsvp = `👉 RSVP here: ${url}`;
+  if (url && e.rsvp_mode !== "phone") waRsvp = `👉 ${e.limited_seats ? "Spots are limited, save yours" : "RSVP so we know you're coming"}: ${url}`;
   if (e.rsvp_mode === "phone") waRsvp = `👉 RSVP on WhatsApp: ${e.rsvp_phone}`;
-  const whatsapp = [
+  const whatsapp = join([
     `${t.emoji} *${e.name}*`,
-    desc ? `_${desc}_` : `_${hook}_`,
+    `_${hook}_`,
+    "",
+    [desc, pick(stories, (s >> 7) + 1)].filter(Boolean).join(" "),
+    pick(welcome, (s >> 9) + 1),
     "",
     `🗓 ${when}`,
     `📍 ${where}`,
     `🎟 ${fee}`,
-    ...ex.filter((x) => !x.startsWith("👋")).slice(0, 3),
+    ...ex.filter((x) => !x.startsWith("👋") && !x.startsWith("🏡")),
     "",
     waRsvp,
-  ].join("\n");
+    pick(signoffs, (s >> 11) + 1),
+  ]);
 
-  const community = [
-    `Hi everyone 👋 ${brandNames(brands)} is hosting *${e.name}* this ${dayName(e.event_date)} in ${loc.name}.`,
+  const who = hotpotOnly ? "The Hotpot House" : brandNames(brands);
+  const community = join([
+    `Hi everyone 👋 ${who} is hosting *${e.name}* this ${dayName(e.event_date)} in ${loc.name}, and we'd love for you to join us.`,
     "",
-    desc || hook,
+    [desc, pick(stories, (s >> 7) + 2)].filter(Boolean).join(" "),
+    "",
+    residents ? "This one is for NomadGao residents." : "Locals, travellers and nomads are all welcome. You don't need to be staying with us, and coming on your own is completely normal here.",
     "",
     `When: ${when}`,
     `Where: ${where}`,
     `Entry: ${fee}`,
-    e.audience === "residents" ? "This one is for NomadGao residents." : "Locals, travellers and nomads are all welcome. You don't need to be staying with us.",
-    e.what_to_bring ? `Bring: ${e.what_to_bring}` : "",
+    e.what_to_bring && `Bring: ${e.what_to_bring}`,
+    e.byob && "BYOB",
+    e.host && `Host: ${e.host}`,
     "",
-    url ? `RSVP: ${url}` : "Just walk in. See you there!",
-  ]
-    .filter((l, i, a) => !(l === "" && a[i - 1] === ""))
-    .join("\n");
+    url ? `RSVP: ${url}` : "No need to RSVP, just come by.",
+    "",
+    `See you there!\n${hotpotOnly ? "The Hotpot House team" : brands.includes("hotpot") ? "The NomadGao & Hotpot House teams" : "The NomadGao team"}`,
+  ]);
 
   return { instagram, whatsapp, community };
 }
@@ -144,16 +173,44 @@ export function weekCaptions(events: EventRow[], week: string, location: Locatio
       ? [BRANDS.nomadgao.hashtag, "#AnjunaGoa", "#Dharamkot", COMMUNITY_TAG, "#CoworkingIndia"].join(" ")
       : hashtags(tagLoc, brands.length ? brands : ["nomadgao"], null, s);
 
-  const instagram = [`${hello} ${title} 🗓`, "", body(false), "", withRsvp.length ? "RSVP links in bio. Save this post so you don't miss a thing!" : "Save this post and come say hi!", "", tags].join("\n");
-  const whatsapp = [`🗓 *${title}*`, "", body(true), "", withRsvp.length ? `*RSVP*\n${rsvpLinks}` : "No RSVP needed, just come by 🙌"].join("\n");
-  const community = [
-    `Hi everyone 👋 Here's what's happening at ${location === "both" ? "NomadGao in Goa and Dharamkot" : `${brandNames(brands.length ? brands : ["nomadgao"])} in ${LOCATIONS[location].name}`} this week. Everyone's welcome!`,
+  const intro = pick(WEEK.intro[location], s >> 2);
+  const close = pick(WEEK.close, s >> 4);
+  const signoff = location === "both" ? "See you on the beach or up the mountain 🌴🏔️" : pick(voice.signoff(location, false), s >> 6);
+  const instagram = join([
+    `${hello} ${title} 🗓`,
+    "",
+    intro,
     "",
     body(false),
     "",
-    withRsvp.length ? `RSVP:\n${rsvpLinks}` : "",
-  ]
-    .join("\n")
-    .trim();
+    `${close} ${withRsvp.length ? "Some events have limited spots, so RSVP via the link in our bio or DM us." : "No RSVPs needed this week, just turn up."}`,
+    "",
+    pick(WEEK.save, s >> 8),
+    signoff,
+    "",
+    tags,
+  ]);
+  const whatsapp = join([
+    `🗓 *${title}*`,
+    "",
+    intro,
+    "",
+    body(true),
+    "",
+    close,
+    "",
+    withRsvp.length ? `*RSVP*\n${rsvpLinks}` : "No RSVP needed, just come by 🙌",
+    "",
+    signoff,
+  ]);
+  const community = join([
+    `Hi everyone 👋 Here's what's happening at ${location === "both" ? "NomadGao in Goa and Dharamkot" : `${brandNames(brands.length ? brands : ["nomadgao"])} in ${LOCATIONS[location].name}`} this week. Locals, travellers and nomads are all welcome, and you don't need to be staying with us.`,
+    "",
+    body(false),
+    "",
+    withRsvp.length ? `RSVP:\n${rsvpLinks}` : "No need to RSVP, just come by.",
+    "",
+    "Hope to see you at one (or all) of them!\nThe NomadGao team",
+  ]);
   return { instagram, whatsapp, community };
 }

@@ -56,7 +56,7 @@ export const EVENT_TYPES: EventType[] = [
   { slug: "sip-paint", name: "Sip & Paint", emoji: "🖌️", hashtag: "#SipAndPaint", hooks: ["A brush in one hand, a drink in the other.", "Picasso who? Just paint.", "Canvas, colours and good vibes."] },
   { slug: "talk", name: "Nomadic Connect Talk", emoji: "🎙️", hashtag: "#NomadicConnect", hooks: ["One nomad, one big idea, one evening.", "Learn from the people you cowork with.", "Ideas worth sharing over chai."] },
   { slug: "meetup", name: "Community Meetup", emoji: "🤝", hashtag: "#CommunityMeetup", hooks: ["New in town? This is your sign.", "Find your tribe.", "Come for the chat, stay for the people."] },
-  { slug: "movie", name: "Movie Night", emoji: "🎬", hashtag: "#MovieNight", hooks: ["Lights low, popcorn high.", "Blankets, snacks and a good film.", "Popcorn's on the house."] },
+  { slug: "movie", name: "Movie Night", emoji: "🎬", hashtag: "#MovieNight", hooks: ["Lights low, popcorn high.", "Blankets, snacks and a good film.", "Grab a comfy spot."] },
   { slug: "watch-party", name: "Watch Party", emoji: "🏏", hashtag: "#WatchParty", hooks: ["Big screen, bigger cheers.", "Pick a side, bring the noise.", "Every ball, together."] },
   { slug: "music", name: "Live Music / Jam", emoji: "🎸", hashtag: "#OpenMic", hooks: ["Bring your instrument or just your ears.", "Strings, songs and sunset.", "Jam session, everyone's invited."] },
   { slug: "wellness", name: "Yoga & Wellness", emoji: "🧘", hashtag: "#MindfulLiving", hooks: ["Breathe in. Slow down.", "A reset for body and mind.", "Mats out, phones away."] },

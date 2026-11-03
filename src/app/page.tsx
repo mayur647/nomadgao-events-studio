@@ -370,7 +370,7 @@ function PosterCard({
             </button>
           ))}
         </div>
-        <textarea className="input !text-sm font-normal flex-1 min-h-[180px]" value={text} onChange={(e) => onCaption({ ...captions, [channel]: e.target.value })} aria-label={`${channel} caption`} />
+        <textarea className="input !text-sm font-normal flex-1 min-h-[240px]" value={text} onChange={(e) => onCaption({ ...captions, [channel]: e.target.value })} aria-label={`${channel} caption`} />
         <div className="flex flex-wrap gap-2 mt-2 items-center">
           <button className="btn-ghost btn-sm" onClick={() => copyText(text).then(() => toast("Caption copied"))}>
             Copy caption
