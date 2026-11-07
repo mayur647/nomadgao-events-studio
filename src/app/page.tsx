@@ -13,7 +13,7 @@ import { hash } from "@/lib/rng";
 import { CHANNELS, eventCaptions, weekCaptions, type Captions, type Channel } from "@/lib/captions";
 import { canShareFiles, copyText, downloadBlob, openWhatsApp, qrDataUrl, renderPng, shareFiles, toDataUrl, zipFiles } from "@/lib/export";
 import type { EventRow, PhotoRow } from "@/lib/types";
-import { archivePoster, loadLook, saveLook } from "@/lib/archive";
+import { archivePoster, archiveProblem, loadLook, saveLook } from "@/lib/archive";
 
 const ALL_SIZES: SizeId[] = ["story", "post", "square"];
 
@@ -214,7 +214,7 @@ export default function StudioPage() {
         setOffsets((o) => ({ ...o, ...Object.fromEntries(done.map((s) => [`archived:${s.key}`, 1])) }));
       }
       if (done.length === list.length) toast(list.length === 1 ? `Archived "${list[0].label}". It's in Past posters.` : `Archived ${list.length} posters. They're in Past posters.`);
-      else toast(`Couldn't save ${list.length - done.length} poster${list.length - done.length === 1 ? "" : "s"} to Past posters, so ${list.length - done.length === 1 ? "it stays" : "they stay"} here. Check your connection and try again.`, "err");
+      else toast(`Couldn't archive ${list.length - done.length === 1 ? "this poster" : `${list.length - done.length} posters`}, so ${list.length - done.length === 1 ? "it stays" : "they stay"} here. ${archiveProblem() ?? "Try again."}`, "err");
     } catch (e) {
       toast(`Couldn't archive: ${(e as Error).message}`, "err");
     } finally {

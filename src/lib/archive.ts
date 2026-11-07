@@ -70,6 +70,25 @@ async function toJpeg(png: Blob): Promise<Blob> {
   return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not save image"))), "image/jpeg", 0.92));
 }
 
+/** Why the last save to Past posters failed, in words the team can act on. */
+let lastProblem: string | null = null;
+export const archiveProblem = () => lastProblem;
+
+function explain(e: { message?: string; code?: string; statusCode?: string | number; error?: string } | null | undefined, where: "table" | "storage") {
+  const msg = `${e?.message ?? ""} ${e?.error ?? ""}`.toLowerCase();
+  const code = String(e?.code ?? "");
+  if (code === "PGRST205" || code === "42P01" || msg.includes("could not find the table") || msg.includes("does not exist"))
+    return "Past posters isn't switched on in the database yet. Mayur needs to run supabase/schema.sql once in Supabase (SQL Editor → paste → Run).";
+  if (msg.includes("row-level security") || msg.includes("violates") || code === "42501" || String(e?.statusCode) === "403")
+    return where === "storage"
+      ? "The database didn't allow saving the image. Mayur needs to run supabase/schema.sql once in Supabase so the team can save to Past posters."
+      : "Your account isn't allowed to save to Past posters yet. Ask Mayur to check your role in Admin, and to run supabase/schema.sql once in Supabase.";
+  if (msg.includes("bucket")) return "The image store isn't set up. Mayur needs to run supabase/schema.sql once in Supabase.";
+  if (msg.includes("jwt") || msg.includes("token")) return "You've been signed out. Sign in again and retry.";
+  if (msg.includes("fetch") || msg.includes("network")) return "The connection dropped. Check the internet and try again.";
+  return `Saving failed: ${e?.message ?? "unknown error"}`;
+}
+
 /**
  * Keep a copy of a poster the team actually used. One per poster per size per week;
  * saving again replaces the older version. Never throws (archiving must not block a download).
@@ -79,7 +98,10 @@ export async function archivePoster(o: { week: string; poster: ArchivablePoster;
     const jpg = await toJpeg(o.png);
     const path = `archive/${o.week}/${o.poster.fileBase}-${o.size}-${Date.now()}.jpg`;
     const up = await sb().storage.from("media").upload(path, jpg, { contentType: "image/jpeg", upsert: false });
-    if (up.error) return false;
+    if (up.error) {
+      lastProblem = explain(up.error as never, "storage");
+      return false;
+    }
     const { data: old } = await sb()
       .from("saved_posters")
       .select("image_path")
@@ -109,12 +131,15 @@ export async function archivePoster(o: { week: string; poster: ArchivablePoster;
         { onConflict: "week_start,poster_key,size" }
       );
     if (error) {
+      lastProblem = explain(error, "table");
       await sb().storage.from("media").remove([path]);
       return false;
     }
     if (old?.image_path && old.image_path !== path) await sb().storage.from("media").remove([old.image_path]);
+    lastProblem = null;
     return true;
-  } catch {
+  } catch (e) {
+    lastProblem = explain(e as Error, "table");
     return false;
   }
 }
