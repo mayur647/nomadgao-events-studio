@@ -12,3 +12,10 @@ import "@fontsource/unbounded/latin-700.css";
 import "@fontsource/caprasimo/latin-400.css";
 import "@fontsource/anton/latin-400.css";
 import "@fontsource/caveat/latin-700.css";
+// Typefaces for the 2026 poster directions
+import "@fontsource-variable/bricolage-grotesque/standard.css";
+import "@fontsource/instrument-serif/latin-400.css";
+import "@fontsource/instrument-serif/latin-400-italic.css";
+import "@fontsource-variable/archivo/standard.css";
+import "@fontsource/dm-mono/latin-400.css";
+import "@fontsource/dm-mono/latin-500.css";

@@ -71,6 +71,11 @@ export const fonts = {
   unbounded: "Unbounded",
   caprasimo: "Caprasimo",
   anton: "Anton",
+  // 2026 poster directions
+  grotesk: "Bricolage Grotesque Variable",
+  serif: "Instrument Serif",
+  condensed: "Archivo Variable",
+  mono: "DM Mono",
 } as const;
 
 /* ───────────── Logos ───────────── */
