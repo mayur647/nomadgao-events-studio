@@ -10,6 +10,7 @@ const NAV = [
   { href: "/", label: "Studio" },
   { href: "/events", label: "Events" },
   { href: "/import", label: "Import" },
+  { href: "/archive", label: "Past posters" },
   { href: "/gallery", label: "Photo gallery" },
   { href: "/admin", label: "Admin", admin: true },
 ];

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Shell } from "@/components/app/Shell";
 import { WeekPicker } from "@/components/app/WeekPicker";
 import { useAuth } from "@/components/app/Auth";
@@ -14,6 +14,7 @@ import { hash } from "@/lib/rng";
 import { CHANNELS, eventCaptions, weekCaptions, type Captions, type Channel } from "@/lib/captions";
 import { canShareFiles, copyText, downloadBlob, openWhatsApp, qrDataUrl, renderPng, shareFiles, toDataUrl, zipFiles } from "@/lib/export";
 import type { EventRow, PhotoRow } from "@/lib/types";
+import { archivePoster, loadLook, saveLook } from "@/lib/archive";
 
 const ALL_SIZES: SizeId[] = ["story", "post", "square"];
 
@@ -45,13 +46,44 @@ export default function StudioPage() {
     if (w) setWeek(w);
   }, []);
 
-  // A fresh look every week; Shuffle changes it.
+  // Each week opens with the look the team last chose (saved), or a fresh one. Shuffle changes it.
+  const [lookReady, setLookReady] = useState(false);
+  const dirty = useRef(false);
   useEffect(() => {
-    setSeed(hash("week", week));
-    setOffsets({});
-    setCaptions({});
+    let live = true;
+    setLookReady(false);
+    dirty.current = false;
     setCapSeed({});
+    loadLook(week).then((l) => {
+      if (!live) return;
+      setSeed(l?.seed ?? hash("week", week));
+      setOffsets(l?.offsets ?? {});
+      setCaptions(l?.captions ?? {});
+      setLookReady(true);
+    });
+    return () => {
+      live = false;
+    };
   }, [week]);
+
+  // Remember shuffles and caption edits for this week (quietly, a second after the last change).
+  useEffect(() => {
+    if (!lookReady || !dirty.current || !session) return;
+    const t = setTimeout(() => {
+      saveLook(week, { seed, offsets, captions }, session.user.id);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [seed, offsets, captions, lookReady, week, session]);
+  const touch = () => (dirty.current = true);
+
+  /** Keep a copy of what was actually used, for Past posters. */
+  const keep = useCallback(
+    (spec: PosterSpec, size: SizeId, png: Blob, c: Captions) => {
+      if (!session) return Promise.resolve(false);
+      return archivePoster({ week, poster: spec, size, png, captions: c, userId: session.user.id });
+    },
+    [session, week]
+  );
 
   useEffect(() => {
     setEvents(null);
@@ -79,7 +111,7 @@ export default function StudioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, photos]);
 
-  const specs = useMemo(() => (events ? buildSpecs({ week, events, photos, seed, offsets, photoData, qrData }) : []), [week, events, photos, seed, offsets, photoData, qrData]);
+  const specs = useMemo(() => (events && lookReady ? buildSpecs({ week, events, photos, seed, offsets, photoData, qrData }) : []), [week, events, photos, seed, offsets, photoData, qrData, lookReady]);
   const shown = specs.filter((s) => filter === "all" || s.location === filter);
 
   const captionsFor = useCallback(
@@ -117,12 +149,15 @@ export default function StudioPage() {
     const list = shown;
     const total = list.length * zipSizes.length;
     const files: { name: string; data: Blob | string }[] = [];
+    const made: [PosterSpec, SizeId, Blob][] = [];
     let n = 0;
     try {
       for (const s of list) {
         for (const sz of zipSizes) {
           setProgress(`Making image ${++n} of ${total}…`);
-          files.push({ name: `${sz}/${s.fileBase}-${sz}.png`, data: await render(s, sz) });
+          const png = await render(s, sz);
+          made.push([s, sz, png]);
+          files.push({ name: `${sz}/${s.fileBase}-${sz}.png`, data: png });
         }
         const c = captionsFor(s);
         files.push({ name: `captions/${s.fileBase}.txt`, data: CHANNELS.map((ch) => `── ${ch.label} ──\n${c[ch.id]}\n`).join("\n") });
@@ -132,6 +167,10 @@ export default function StudioPage() {
       downloadBlob(zip, `nomadgao-week-${week}${filter === "all" ? "" : `-${filter}`}.zip`);
       log(list.map((s) => ({ spec: s, action: "zip", size: zipSizes.join(","), count: zipSizes.length })));
       toast(`Downloaded ${total} images and ${list.length} caption files`);
+      setProgress("Saving to Past posters…");
+      let ok = 0;
+      for (const [s, sz, png] of made) if (await keep(s, sz, png, captionsFor(s))) ok++;
+      if (ok) toast(`Saved ${ok} posters to Past posters`);
     } catch (e) {
       toast(`Something went wrong making the ZIP: ${(e as Error).message}`, "err");
     } finally {
@@ -140,6 +179,7 @@ export default function StudioPage() {
   }
 
   function shuffleAll() {
+    touch();
     setSeed(Math.floor(Math.random() * 2 ** 31));
     setOffsets({});
   }
@@ -149,7 +189,10 @@ export default function StudioPage() {
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div className="mr-auto">
           <h1 className="font-display text-3xl font-extrabold">Poster studio</h1>
-          <p className="text-mute text-sm">Week of {weekRange(week)}. Shuffle until you like the look, then download or share.</p>
+          <p className="text-mute text-sm">
+            Week of {weekRange(week)}. Shuffle until you like the look, then download or share. Everything you download is kept in{" "}
+            <Link href="/archive" className="underline">Past posters</Link>.
+          </p>
         </div>
         <WeekPicker week={week} onChange={setWeek} />
       </div>
@@ -186,7 +229,7 @@ export default function StudioPage() {
         </div>
       </div>
 
-      {events === null ? (
+      {events === null || !lookReady ? (
         <p className="text-mute">Loading this week…</p>
       ) : events.length === 0 ? (
         <div className="card p-10 text-center">
@@ -206,8 +249,12 @@ export default function StudioPage() {
               spec={s}
               size={size}
               captions={captionsFor(s)}
-              onCaption={(c) => setCaptions((x) => ({ ...x, [s.key]: c }))}
+              onCaption={(c) => {
+                touch();
+                setCaptions((x) => ({ ...x, [s.key]: c }));
+              }}
               onNewCaption={() => {
+                touch();
                 setCaptions((x) => {
                   const y = { ...x };
                   delete y[s.key];
@@ -215,8 +262,12 @@ export default function StudioPage() {
                 });
                 setCapSeed((x) => ({ ...x, [s.key]: (x[s.key] ?? 0) + 1 }));
               }}
-              onShuffle={() => setOffsets((o) => ({ ...o, [s.key]: (o[s.key] ?? 0) + 1 }))}
+              onShuffle={() => {
+                touch();
+                setOffsets((o) => ({ ...o, [s.key]: (o[s.key] ?? 0) + 1 }));
+              }}
               render={render}
+              keep={keep}
               log={log}
               week={week}
             />
@@ -235,6 +286,7 @@ function PosterCard({
   onNewCaption,
   onShuffle,
   render,
+  keep,
   log,
   week,
 }: {
@@ -245,6 +297,7 @@ function PosterCard({
   onNewCaption: () => void;
   onShuffle: () => void;
   render: (s: PosterSpec, sz: SizeId) => Promise<Blob>;
+  keep: (s: PosterSpec, sz: SizeId, png: Blob, c: Captions) => Promise<boolean>;
   log: (rows: { spec: PosterSpec; action: string; size?: string; count?: number }[]) => Promise<void>;
   week: string;
 }) {
@@ -269,17 +322,25 @@ function PosterCard({
 
   const download = () =>
     run("download", async () => {
-      downloadBlob(await render(spec, size), `${spec.fileBase}-${size}.png`);
+      const png = await render(spec, size);
+      downloadBlob(png, `${spec.fileBase}-${size}.png`);
       log([{ spec, action: "download", size }]);
+      keep(spec, size, png, captions);
     });
 
   const downloadSizes = () =>
     run("sizes", async () => {
       const files: { name: string; data: Blob | string }[] = [];
-      for (const sz of ALL_SIZES) files.push({ name: `${spec.fileBase}-${sz}.png`, data: await render(spec, sz) });
+      const made: [SizeId, Blob][] = [];
+      for (const sz of ALL_SIZES) {
+        const png = await render(spec, sz);
+        made.push([sz, png]);
+        files.push({ name: `${spec.fileBase}-${sz}.png`, data: png });
+      }
       files.push({ name: `${spec.fileBase}-captions.txt`, data: CHANNELS.map((ch) => `── ${ch.label} ──\n${captions[ch.id]}\n`).join("\n") });
       downloadBlob(await zipFiles(files), `${spec.fileBase}.zip`);
       log([{ spec, action: "zip", size: "story,post,square", count: 3 }]);
+      for (const [sz, png] of made) await keep(spec, sz, png, captions);
     });
 
   const share = () =>
@@ -291,6 +352,7 @@ function PosterCard({
       if (r === "shared") {
         toast("Shared. The caption is also copied, in case the app dropped it.");
         log([{ spec, action: "share", size }]);
+        keep(spec, size, blob, captions);
       }
     });
 
@@ -300,6 +362,7 @@ function PosterCard({
       const copied = await openWhatsApp(blob, captions.whatsapp);
       toast(copied ? "WhatsApp opened with the caption. Pick a group, then press Ctrl+V to attach the poster." : "WhatsApp opened with the caption. Download the poster and attach it.");
       log([{ spec, action: "whatsapp", size }]);
+      keep(spec, size, blob, captions);
     });
 
   async function ai() {
