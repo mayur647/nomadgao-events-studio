@@ -120,13 +120,16 @@ function Lines({ events, k, small }: { events: PosterEvent[]; k: { a: string; b:
   );
 }
 
-export function CalC({ location, events, range, size }: { location: LocationId; events: PosterEvent[]; range: string; size: SizeId; photo?: string | null }) {
+export const CAL_TITLES = [["This", "week"], ["What's", "on"], ["Week", "ahead"]] as const;
+export const JOINT_TITLES = ["Beach & mountains", "Two homes, one week", "This week at NomadGao"] as const;
+
+export function CalC({ location, events, range, size, title = 0 }: { location: LocationId; events: PosterEvent[]; range: string; size: SizeId; photo?: string | null; title?: number }) {
   const k = INKS[location];
   const fr = frame(size);
   return (
     <Box size={size} bg={k.paper} color={k.b}>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: size === "story" ? 760 : size === "square" ? 420 : 520, overflow: "hidden" }}>
-        <Shape kind={location === "goa" ? "sun" : "peak"} color={k.a} w={fr.w * (location === "goa" ? 0.62 : 1)} h={size === "story" ? 760 : size === "square" ? 420 : 520} />
+      <div style={{ position: "absolute", left: 0, right: 0, top: fr.padTop + 52, height: size === "story" ? 620 : size === "square" ? 250 : 420, overflow: "hidden" }}>
+        <Shape kind={location === "goa" ? "sun" : "peak"} color={k.a} w={fr.w * (location === "goa" ? 0.62 : 1)} h={size === "story" ? 620 : size === "square" ? 250 : 420} />
       </div>
       <div style={{ padding: `${fr.padTop}px ${fr.padX}px ${fr.padBottom}px`, display: "flex", flexDirection: "column", height: "100%", position: "relative" }}>
         <div style={{ display: "flex", justifyContent: "space-between", ...mono(26), borderBottom: `2px solid ${k.b}`, paddingBottom: 12 }}>
@@ -134,9 +137,9 @@ export function CalC({ location, events, range, size }: { location: LocationId; 
           <span>{range}</span>
         </div>
         <div style={{ ...cond(), fontSize: size === "square" ? 170 : 220, lineHeight: 0.84, marginTop: 28, textShadow: `6px 5px 0 ${k.a}` }}>
-          This
+          {CAL_TITLES[title % CAL_TITLES.length][0]}
           <br />
-          week
+          {CAL_TITLES[title % CAL_TITLES.length][1]}
         </div>
         <FitBlock origin="top left" grow={1.5} style={{ marginTop: 24 }}>
           <Lines events={events} k={k} />
@@ -151,7 +154,7 @@ export function CalC({ location, events, range, size }: { location: LocationId; 
   );
 }
 
-export function JointC({ goa, dharamkot, range, size }: { goa: PosterEvent[]; dharamkot: PosterEvent[]; range: string; size: SizeId }) {
+export function JointC({ goa, dharamkot, range, size, title = 0 }: { goa: PosterEvent[]; dharamkot: PosterEvent[]; range: string; size: SizeId; title?: number }) {
   const fr = frame(size);
   const paper = "#F2EDE3";
   const sec = (loc: LocationId, evs: PosterEvent[]) => (
@@ -167,7 +170,7 @@ export function JointC({ goa, dharamkot, range, size }: { goa: PosterEvent[]; dh
           <span>NomadGao weekly</span>
           <span>{range}</span>
         </div>
-        <div style={{ ...cond(), fontSize: size === "square" ? 120 : 150, lineHeight: 0.86, marginTop: 22, color: INKS.goa.b, textShadow: `5px 4px 0 ${INKS.dharamkot.a}` }}>Beach &amp; mountains</div>
+        <div style={{ ...cond(), fontSize: size === "square" ? 120 : 150, lineHeight: 0.86, marginTop: 22, color: INKS.goa.b, textShadow: `5px 4px 0 ${INKS.dharamkot.a}` }}>{JOINT_TITLES[title % JOINT_TITLES.length]}</div>
         <FitBlock origin="top left" grow={1.4}>
           {sec("goa", goa)}
           {sec("dharamkot", dharamkot)}

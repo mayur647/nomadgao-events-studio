@@ -46,13 +46,19 @@ export function Box({ size, bg, color, children, style }: { size: SizeId; bg: st
   );
 }
 
-/** Film-grain / paper texture as an SVG data URI (renders inside html-to-image). */
-export const GRAIN = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>`
-)}")`;
+/** Film-grain / paper texture: tiny PNG tiles, so previews and exported images look identical. */
+export const GRAIN_DARK = "url(/textures/grain-dark.png)";
+export const GRAIN_LIGHT = "url(/textures/grain-light.png)";
 
+/** Dark and light specks in equal measure, so texture shows without shifting the paper colour. */
 export function Grain({ opacity = 0.22 }: { opacity?: number }) {
-  return <div style={{ position: "absolute", inset: 0, backgroundImage: GRAIN, backgroundSize: "300px 300px", opacity, mixBlendMode: "multiply", pointerEvents: "none" }} />;
+  const layer = { position: "absolute" as const, inset: 0, backgroundSize: "300px 300px", pointerEvents: "none" as const };
+  return (
+    <>
+      <div style={{ ...layer, backgroundImage: GRAIN_DARK, opacity: opacity * 1.0 }} />
+      <div style={{ ...layer, backgroundImage: GRAIN_LIGHT, opacity: opacity * 1.15 }} />
+    </>
+  );
 }
 
 export function hasBrand(ev: { brands: BrandId[] }, b: BrandId) {

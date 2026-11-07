@@ -1,14 +1,13 @@
 "use client";
 import type { ReactNode } from "react";
-import { LOCATIONS, SIZES, type BrandId, type LocationId, type SizeId } from "@/lib/constants";
-import { FONT_SETS, PALETTES, palettePool } from "@/lib/themes";
-import { hash, pick, shuffled } from "@/lib/rng";
+import { LOCATIONS, type LocationId, type SizeId } from "@/lib/constants";
+import { hash, shuffled } from "@/lib/rng";
 import type { EventRow, PhotoRow } from "@/lib/types";
 import { safeName } from "@/lib/export";
-import { dateShort, dayName } from "@/lib/format";
+import { dateShort, dayName, weekRange } from "@/lib/format";
 import { toPosterEvent } from "./common";
-import { EVENT_TEMPLATES, EventPoster, TEMPLATE_NAMES } from "./EventPoster";
-import { CAL_NAMES, CAL_TEMPLATES, JOINT_TEMPLATES, JointCalendar, LocationCalendar } from "./Calendars";
+import { CAL_TITLES, CalC, JOINT_TITLES, JointC } from "./v2/DirC";
+import { MIX_LAYOUTS, MIX_NAMES, MixPoster } from "./v2/DirD";
 
 export interface PosterSpec {
   key: string;
@@ -51,15 +50,10 @@ export function buildSpecs(opts: {
   const dk = sorted.filter((e) => e.location === "dharamkot");
   const range = `${dateShort(week)}`;
 
-  // ── joint calendar
+  // ── joint calendar (Printed matter programme sheet; Shuffle changes the headline)
   if (sorted.length) {
     const off = offsets.joint ?? 0;
-    const s = hash(seed, "joint", off);
-    const template = pick(JOINT_TEMPLATES, s);
-    const goaPal = pick(PALETTES.goa, hash(s, "g"));
-    const dkPal = pick(PALETTES.dharamkot, hash(s, "d"));
-    const font = pick(FONT_SETS, hash(s, "f"));
-    const brands: BrandId[] = sorted.some((e) => e.brands?.includes("hotpot")) ? ["nomadgao", "hotpot"] : ["nomadgao"];
+    const title = (hash(seed, "joint") + off) % JOINT_TITLES.length;
     const pg = goa.map(toPosterEvent), pd = dk.map(toPosterEvent);
     specs.push({
       key: "joint",
@@ -68,11 +62,11 @@ export function buildSpecs(opts: {
       sub: "Goa + Dharamkot",
       location: "both",
       events: sorted,
-      template,
-      look: `${CAL_NAMES[template]} · ${goaPal.name} + ${dkPal.name} · ${font.name}`,
+      template: "programme",
+      look: `Programme · "${JOINT_TITLES[title]}"`,
       fileBase: `00-joint-calendar-${range.replace(" ", "")}`,
       photoPath: null,
-      render: (size) => <JointCalendar template={template} week={week} goa={pg} dharamkot={pd} size={size} w={SIZES[size].w} h={SIZES[size].h} goaPal={goaPal} dkPal={dkPal} font={font} seed={s} brands={brands} />,
+      render: (size) => <JointC goa={pg} dharamkot={pd} range={weekRange(week)} size={size} title={title} />,
     });
   }
 
@@ -81,12 +75,7 @@ export function buildSpecs(opts: {
     if (!list.length) continue;
     const key = `cal-${loc}`;
     const off = offsets[key] ?? 0;
-    const s = hash(seed, key, off);
-    const template = pick(CAL_TEMPLATES, s);
-    const brands: BrandId[] = [...new Set(list.flatMap((e) => e.brands ?? ["nomadgao"]))] as BrandId[];
-    const ordered: BrandId[] = brands.includes("hotpot") && brands.includes("nomadgao") ? ["hotpot", "nomadgao"] : brands.length ? brands : ["nomadgao"];
-    const pal = pick(shuffled(palettePool(loc, ordered), hash(s, "pal")), 0);
-    const font = pick(FONT_SETS, hash(s, "font"));
+    const title = (hash(seed, key) + off) % CAL_TITLES.length;
     const pe = list.map(toPosterEvent);
     specs.push({
       key,
@@ -95,25 +84,20 @@ export function buildSpecs(opts: {
       sub: `${list.length} event${list.length > 1 ? "s" : ""}`,
       location: loc,
       events: list,
-      template,
-      look: `${CAL_NAMES[template]} · ${pal.name} · ${font.name}`,
+      template: "programme",
+      look: `Programme · "${CAL_TITLES[title].join(" ")}"`,
       fileBase: `${loc === "goa" ? "01" : "02"}-${loc}-calendar-${range.replace(" ", "")}`,
       photoPath: null,
-      render: (size) => <LocationCalendar template={template} location={loc} brands={ordered} week={week} events={pe} size={size} w={SIZES[size].w} h={SIZES[size].h} pal={pal} font={font} seed={s} />,
+      render: (size) => <CalC location={loc} events={pe} range={weekRange(week)} size={size} title={title} />,
     });
   }
 
-  // ── event posters: templates dealt like cards so neighbours differ
-  const deck = shuffled(EVENT_TEMPLATES, hash(seed, "deck"));
-  const palDeck: Record<LocationId, number> = { goa: 0, dharamkot: 0 };
+  // ── event posters: Postcard / Polaroid / Cover, dealt like cards so neighbours differ
+  const deck = shuffled(MIX_LAYOUTS, hash(seed, "deck"));
   sorted.forEach((e, i) => {
     const off = offsets[e.id] ?? 0;
     const s = hash(seed, e.id, off);
-    const template = deck[(i + off) % deck.length];
-    const brands: BrandId[] = e.brands?.length ? e.brands : ["nomadgao"];
-    const pool = shuffled(palettePool(e.location, brands), hash(seed, e.location, "pals"));
-    const pal = pool[(palDeck[e.location]++ + off) % pool.length];
-    const font = pick(FONT_SETS, hash(s, "font"));
+    const layout = deck[(i + off) % deck.length];
     const photos_ = photoPool(e, photos);
     const photoPath = photos_.length ? photos_[hash(s, "photo") % photos_.length] : null;
     const photo = photoPath ? photoData[photoPath] ?? null : null;
@@ -127,11 +111,11 @@ export function buildSpecs(opts: {
       location: e.location,
       event: e,
       events: [e],
-      template,
-      look: `${TEMPLATE_NAMES[template]} · ${pal.name} · ${font.name}${photoPath ? "" : " · no photo"}`,
+      template: layout,
+      look: `${MIX_NAMES[layout]}${photoPath ? "" : " · no photo"}`,
       fileBase: `${String(i + 3).padStart(2, "0")}-${e.location}-${safeName(e.name)}-${dayName(e.event_date, true).toLowerCase()}`,
       photoPath,
-      render: (size) => <EventPoster template={template} ev={pe} size={size} w={SIZES[size].w} h={SIZES[size].h} pal={pal} font={font} seed={s} photo={photo} qr={qr} />,
+      render: (size) => <MixPoster layout={layout} ev={pe} size={size} photo={photo} qr={qr} />,
     });
   });
   return specs;

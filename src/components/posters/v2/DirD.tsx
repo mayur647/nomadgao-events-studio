@@ -29,7 +29,9 @@ function Photo({ src, pos = "center 35%" }: { src: string; pos?: string }) {
 function TopBar({ ev, color, size }: { ev: PosterEvent; color: string; size: number }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", ...mono(size), borderBottom: `2px solid ${color}`, paddingBottom: 12, flexShrink: 0 }}>
-      <span>NomadGao · {placeShort(ev.location).split(",")[0]}</span>
+      <span>
+        {ev.brands.includes("nomadgao") ? "NomadGao" : "The Hotpot House"} · {placeShort(ev.location).split(",")[0]}
+      </span>
       <span>{ev.typeName}</span>
     </div>
   );
@@ -119,13 +121,13 @@ export function PolaroidD({ ev, size, photo, qr }: P) {
       </div>
       <div style={{ padding: `${fr.padTop}px ${fr.padX}px ${fr.padBottom}px`, display: "flex", flexDirection: "column", height: "100%", gap: sq ? 14 : 22, position: "relative" }}>
         <TopBar ev={ev} color={k.b} size={sq ? 22 : 26} />
-        <div style={{ display: "flex", justifyContent: sq ? "flex-start" : "center", flexShrink: 0, gap: 30, alignItems: "flex-end" }}>
-          <div style={{ width: pw, background: "#FFFEFA", padding: `${sq ? 16 : 22}px ${sq ? 16 : 22}px 0`, boxShadow: "0 18px 40px rgba(30,30,30,.22)", transform: "rotate(-2.5deg)", position: "relative" }}>
-            <div style={{ position: "absolute", top: -22, left: "50%", width: 200, height: 52, marginLeft: -100, background: k.a, opacity: 0.85, transform: "rotate(3deg)", mixBlendMode: "multiply" }} />
-            <div style={{ height: ph, overflow: "hidden", background: k.paper, position: "relative" }}>
+        <div style={{ display: "flex", justifyContent: sq ? "flex-start" : "center", flex: 1, minHeight: 0, maxHeight: ph + (sq ? 80 : 114), gap: 30, alignItems: "stretch", paddingTop: 10 }}>
+          <div style={{ width: pw, background: "#FFFEFA", padding: `${sq ? 16 : 22}px ${sq ? 16 : 22}px 0`, boxShadow: "0 18px 40px rgba(30,30,30,.22)", transform: "rotate(-2.5deg)", position: "relative", display: "flex", flexDirection: "column" }}>
+            <div style={{ position: "absolute", top: -22, left: "50%", width: 200, height: 52, marginLeft: -100, background: k.a, opacity: 0.85, transform: "rotate(3deg)" }} />
+            <div style={{ flex: 1, minHeight: 0, overflow: "hidden", background: k.paper, position: "relative" }}>
               {photo ? <Photo src={photo} /> : <Shape kind={shapeOf(ev)} color={k.b} w={pw - 44} h={ph} />}
             </div>
-            <div style={{ height: sq ? 64 : 92, display: "flex", alignItems: "center", justifyContent: "space-between", ...mono(sq ? 20 : 26), color: "#3A3A3A" }}>
+            <div style={{ height: sq ? 64 : 92, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", ...mono(sq ? 20 : 26), color: "#3A3A3A" }}>
               <span>
                 {ev.dayShort} {nnum(ev.date)}
               </span>
@@ -141,7 +143,7 @@ export function PolaroidD({ ev, size, photo, qr }: P) {
             </div>
           )}
         </div>
-        <FitText max={story ? 200 : sq ? 96 : 150} min={64} maxLines={2} lineHeight={0.86} style={{ ...cond(), color: k.b, textShadow: `5px 4px 0 ${k.a}`, marginTop: sq ? 4 : 18 }}>
+        <FitText max={story ? 200 : sq ? 96 : 140} min={64} maxLines={2} lineHeight={0.86} style={{ ...cond(), color: k.b, textShadow: `5px 4px 0 ${k.a}`, marginTop: sq ? 4 : 14, flexShrink: 0 }}>
           {ev.title}
         </FitText>
         <div style={{ display: "flex", gap: 24, alignItems: "flex-end", marginTop: "auto" }}>
