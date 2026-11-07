@@ -116,7 +116,14 @@ export default function StudioPage() {
   }, [events, photos]);
 
   const specs = useMemo(() => (events && lookReady ? buildSpecs({ week, events, photos, seed, offsets, photoData, qrData }) : []), [week, events, photos, seed, offsets, photoData, qrData, lookReady]);
-  const shown = specs.filter((s) => filter === "all" || s.location === filter);
+  // Archived posters are saved to Past posters and hidden here (kept in the week's saved look as "archived:<key>").
+  const archived = useMemo(() => new Set(Object.keys(offsets).filter((k) => k.startsWith("archived:")).map((k) => k.slice(9))), [offsets]);
+  const [showArchived, setShowArchived] = useState(false);
+  const inFilter = specs.filter((s) => filter === "all" || s.location === filter);
+  const shown = inFilter.filter((s) => !archived.has(s.key));
+  const hidden = inFilter.filter((s) => archived.has(s.key));
+  const today = toISO(todayIST());
+  const pastEvents = shown.filter((s) => s.kind === "event" && s.event && s.event.event_date < today);
 
   const captionsFor = useCallback(
     (s: PosterSpec) => captions[s.key] ?? templateCaptions(s, week, origin, capSeed[s.key] ?? 0),
@@ -185,7 +192,43 @@ export default function StudioPage() {
   function shuffleAll() {
     touch();
     setSeed(Math.floor(Math.random() * 2 ** 31));
-    setOffsets({});
+    setOffsets((o) => Object.fromEntries(Object.entries(o).filter(([k]) => k.startsWith("archived:"))));
+  }
+
+  /** Save all three sizes to Past posters, then hide the poster from the Studio. */
+  async function archive(list: PosterSpec[]) {
+    let n = 0;
+    const done: PosterSpec[] = [];
+    try {
+      for (const s of list) {
+        n++;
+        let ok = true;
+        for (const sz of ALL_SIZES) {
+          setProgress(`Archiving ${n} of ${list.length}…`);
+          ok = (await keep(s, sz, await render(s, sz), captionsFor(s))) && ok;
+        }
+        if (ok) done.push(s);
+      }
+      if (done.length) {
+        touch();
+        setOffsets((o) => ({ ...o, ...Object.fromEntries(done.map((s) => [`archived:${s.key}`, 1])) }));
+      }
+      if (done.length === list.length) toast(list.length === 1 ? `Archived "${list[0].label}". It's in Past posters.` : `Archived ${list.length} posters. They're in Past posters.`);
+      else toast(`Couldn't save ${list.length - done.length} poster${list.length - done.length === 1 ? "" : "s"} to Past posters, so ${list.length - done.length === 1 ? "it stays" : "they stay"} here. Check your connection and try again.`, "err");
+    } catch (e) {
+      toast(`Couldn't archive: ${(e as Error).message}`, "err");
+    } finally {
+      setProgress(null);
+    }
+  }
+
+  function restore(s: PosterSpec) {
+    touch();
+    setOffsets((o) => {
+      const x = { ...o };
+      delete x[`archived:${s.key}`];
+      return x;
+    });
   }
 
   return (
@@ -226,6 +269,11 @@ export default function StudioPage() {
         <button className="btn-ghost" onClick={shuffleAll} disabled={!specs.length}>
           🎲 Shuffle everything
         </button>
+        {pastEvents.length > 0 && (
+          <button className="btn-ghost" onClick={() => archive(pastEvents)} disabled={!!progress} title="Save them to Past posters and hide them here">
+            Archive {pastEvents.length} past event{pastEvents.length === 1 ? "" : "s"}
+          </button>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-3">
           <fieldset className="flex items-center gap-2 text-sm">
             <legend className="sr-only">Sizes in the ZIP</legend>
@@ -255,10 +303,21 @@ export default function StudioPage() {
           </div>
         </div>
       ) : (
+        <>
+        {shown.length === 0 && (
+          <div className="card p-8 text-center mb-6">
+            <p className="font-hand text-3xl text-moss">all archived</p>
+            <p className="text-mute mt-1">Every poster for this week is in <Link href="/archive" className="underline">Past posters</Link>.</p>
+          </div>
+        )}
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {shown.map((s) => (
+          {[...shown, ...(showArchived ? hidden : [])].map((s) => (
             <PosterCard
               key={s.key}
+              archived={archived.has(s.key)}
+              onArchive={() => archive([s])}
+              onRestore={() => restore(s)}
+              busyAll={!!progress}
               spec={s}
               size={size}
               captions={captionsFor(s)}
@@ -286,12 +345,29 @@ export default function StudioPage() {
             />
           ))}
         </div>
+        {hidden.length > 0 && (
+          <div className="mt-6 text-sm text-mute flex flex-wrap items-center gap-2">
+            {hidden.length} archived poster{hidden.length === 1 ? "" : "s"} hidden this week.
+            <button className="underline" onClick={() => setShowArchived((x) => !x)}>
+              {showArchived ? "Hide them" : "Show them"}
+            </button>
+            <span>·</span>
+            <Link href={`/archive?week=${week}`} className="underline">
+              Open Past posters
+            </Link>
+          </div>
+        )}
+        </>
       )}
     </Shell>
   );
 }
 
 function PosterCard({
+  archived,
+  onArchive,
+  onRestore,
+  busyAll,
   spec,
   size,
   captions,
@@ -303,6 +379,10 @@ function PosterCard({
   log,
   week,
 }: {
+  archived: boolean;
+  onArchive: () => void;
+  onRestore: () => void;
+  busyAll: boolean;
   spec: PosterSpec;
   size: SizeId;
   captions: Captions;
@@ -407,7 +487,7 @@ function PosterCard({
   }
 
   return (
-    <article className="card p-3 flex flex-col">
+    <article className={`card p-3 flex flex-col ${archived ? "opacity-60" : ""}`}>
       <Preview w={SIZES[size].w} h={SIZES[size].h} maxH={560}>
         {spec.render(size)}
       </Preview>
@@ -417,9 +497,20 @@ function PosterCard({
           <p className="text-xs text-mute">{spec.sub}</p>
           <p className="text-xs text-mute">{spec.look}</p>
         </div>
-        <button className="btn-ghost btn-sm" onClick={onShuffle} title="Try another layout, colours and photo">
-          🎲 Shuffle
-        </button>
+        {archived ? (
+          <button className="btn-ghost btn-sm" onClick={onRestore} title="Bring it back to the Studio">
+            Restore
+          </button>
+        ) : (
+          <>
+            <button className="btn-ghost btn-sm" onClick={onShuffle} title="Try another layout and photo">
+              🎲 Shuffle
+            </button>
+            <button className="btn-ghost btn-sm" onClick={onArchive} disabled={busyAll} title="Save all 3 sizes to Past posters and hide it here">
+              Archive
+            </button>
+          </>
+        )}
       </div>
       <div className="flex flex-wrap gap-2 mt-3">
         <button className="btn-primary btn-sm" onClick={download} disabled={!!busy}>
