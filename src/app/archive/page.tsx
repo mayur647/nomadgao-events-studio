@@ -7,7 +7,7 @@ import { listSaved, listWeeks, type SavedPoster } from "@/lib/archive";
 import { CHANNELS, type Channel } from "@/lib/captions";
 import { SIZES, type LocationId, type SizeId } from "@/lib/constants";
 import { copyText, downloadBlob, zipFiles } from "@/lib/export";
-import { weekRange } from "@/lib/format";
+import { toISO, todayIST, weekRange, weekStart } from "@/lib/format";
 import { publicUrl } from "@/lib/supabase";
 
 const SIZE_ORDER: SizeId[] = ["post", "square", "story"];
@@ -116,9 +116,11 @@ export default function ArchivePage() {
         </div>
       ) : (
         <>
-          <p className="text-sm text-mute mb-4">
-            Want to change something? <Link className="underline" href={`/?week=${week}`}>Open this week in the Studio</Link>; it opens with the same look and captions.
-          </p>
+          {week && week >= toISO(weekStart(todayIST())) && (
+            <p className="text-sm text-mute mb-4">
+              Want to change something? <Link className="underline" href={`/?week=${week}`}>Open this week in the Studio</Link>; it opens with the same look and captions.
+            </p>
+          )}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {posters.map((g) => (
               <SavedCard key={g[0].poster_key} group={g} />

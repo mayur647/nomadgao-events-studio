@@ -2,14 +2,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Shell } from "@/components/app/Shell";
-import { WeekPicker } from "@/components/app/WeekPicker";
 import { useAuth } from "@/components/app/Auth";
 import { useToast } from "@/components/app/Toast";
 import { Preview } from "@/components/posters/Preview";
 import { buildSpecs, photoPool, type PosterSpec } from "@/components/posters/specs";
 import { publicUrl, sb } from "@/lib/supabase";
 import { SIZES, type LocationId, type SizeId } from "@/lib/constants";
-import { addDays, parseDate, planningWeek, rsvpUrl, toISO, weekRange } from "@/lib/format";
+import { addDays, parseDate, planningWeek, rsvpUrl, toISO, todayIST, weekRange, weekStart } from "@/lib/format";
 import { hash } from "@/lib/rng";
 import { CHANNELS, eventCaptions, weekCaptions, type Captions, type Channel } from "@/lib/captions";
 import { canShareFiles, copyText, downloadBlob, openWhatsApp, qrDataUrl, renderPng, shareFiles, toDataUrl, zipFiles } from "@/lib/export";
@@ -41,9 +40,14 @@ export default function StudioPage() {
   const [progress, setProgress] = useState<string | null>(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
+  // The Studio only shows this week and next week; older weeks live in Past posters.
+  const thisWeek = toISO(weekStart(todayIST()));
+  const nextWeek = toISO(addDays(weekStart(todayIST()), 7));
   useEffect(() => {
     const w = new URLSearchParams(window.location.search).get("week");
-    if (w) setWeek(w);
+    if (w === thisWeek || w === nextWeek) setWeek(w);
+    else if (w && w < thisWeek) toast("Older weeks are in Past posters. The Studio shows this week and next week.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Each week opens with the look the team last chose (saved), or a fresh one. Shuffle changes it.
@@ -194,7 +198,16 @@ export default function StudioPage() {
             <Link href="/archive" className="underline">Past posters</Link>.
           </p>
         </div>
-        <WeekPicker week={week} onChange={setWeek} />
+        <div className="inline-flex rounded-xl border border-line bg-white overflow-hidden" role="radiogroup" aria-label="Week">
+          {[
+            [thisWeek, "This week"],
+            [nextWeek, "Next week"],
+          ].map(([w, label]) => (
+            <button key={w} role="radio" aria-checked={week === w} onClick={() => setWeek(w)} className={`px-4 py-2 text-sm font-semibold ${week === w ? "bg-moss text-white" : "hover:bg-matcha-soft"}`}>
+              {label} <span className={`font-normal ${week === w ? "text-white/80" : "text-mute"}`}>· {weekRange(w)}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="card p-3 sm:p-4 mb-6 flex flex-wrap items-center gap-3 sticky top-0 z-20 shadow-sm">
