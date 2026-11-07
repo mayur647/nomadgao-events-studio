@@ -61,6 +61,9 @@ export function Grain({ opacity = 0.22 }: { opacity?: number }) {
   );
 }
 
+/** Logo height per size: big enough to read at phone-thumbnail size, always on solid paper or a plate. */
+export const logoH = (size: SizeId) => (size === "story" ? 62 : size === "square" ? 48 : 56);
+
 export function hasBrand(ev: { brands: BrandId[] }, b: BrandId) {
   return ev.brands.includes(b);
 }

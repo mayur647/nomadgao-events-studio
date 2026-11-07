@@ -6,7 +6,7 @@
  */
 import type { LocationId, SizeId } from "@/lib/constants";
 import { FitBlock, FitText, Logos, type PosterEvent } from "../common";
-import { Box, f, frame, Grain, placeShort, shortVenue } from "./kit";
+import { Box, f, frame, Grain, logoH, placeShort, shortVenue } from "./kit";
 
 export const INKS: Record<LocationId | "hotpot", { a: string; b: string; paper: string }> = {
   goa: { a: "#FF6B4A", b: "#0B5A8C", paper: "#F3EDE2" }, // sunset coral + Arabian Sea blue
@@ -85,7 +85,7 @@ export function EventC({ ev, size, photo, qr }: { ev: PosterEvent; size: SizeId;
           )}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `2px solid ${k.b}`, paddingTop: 14 }}>
-          <Logos brands={ev.brands} dark={false} height={sq ? 30 : 36} gap={12} color={k.b} />
+          <Logos brands={ev.brands} dark={false} height={logoH(size)} gap={14} color={k.b} />
           <span style={mono(22)}>No. {weekNo(ev.date)}</span>
         </div>
       </div>
@@ -128,8 +128,8 @@ export function CalC({ location, events, range, size, title = 0 }: { location: L
   const fr = frame(size);
   return (
     <Box size={size} bg={k.paper} color={k.b}>
-      <div style={{ position: "absolute", left: 0, right: 0, top: fr.padTop + 52, height: size === "story" ? 620 : size === "square" ? 250 : 420, overflow: "hidden" }}>
-        <Shape kind={location === "goa" ? "sun" : "peak"} color={k.a} w={fr.w * (location === "goa" ? 0.62 : 1)} h={size === "story" ? 620 : size === "square" ? 250 : 420} />
+      <div style={{ position: "absolute", left: 0, right: 0, top: fr.padTop + 52, height: size === "story" ? 620 : size === "square" ? 190 : 420, overflow: "hidden" }}>
+        <Shape kind={location === "goa" ? "sun" : "peak"} color={k.a} w={fr.w * (location === "goa" ? 0.62 : 1)} h={size === "story" ? 620 : size === "square" ? 190 : 420} />
       </div>
       <div style={{ padding: `${fr.padTop}px ${fr.padX}px ${fr.padBottom}px`, display: "flex", flexDirection: "column", height: "100%", position: "relative" }}>
         <div style={{ display: "flex", justifyContent: "space-between", ...mono(26), borderBottom: `2px solid ${k.b}`, paddingBottom: 12 }}>
@@ -142,10 +142,12 @@ export function CalC({ location, events, range, size, title = 0 }: { location: L
           {CAL_TITLES[title % CAL_TITLES.length][1]}
         </div>
         <FitBlock origin="top left" grow={1.5} style={{ marginTop: 24 }}>
-          <Lines events={events} k={k} />
+          <div style={{ paddingBottom: 18 }}>
+            <Lines events={events} k={k} />
+          </div>
         </FitBlock>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14 }}>
-          <Logos brands={["nomadgao"]} dark={false} height={36} gap={12} color={k.b} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, position: "relative", zIndex: 2 }}>
+          <Logos brands={events.some((e) => e.brands.includes("hotpot")) ? ["hotpot", "nomadgao"] : ["nomadgao"]} dark={false} height={logoH(size)} gap={14} color={k.b} />
           <span style={mono(22)}>RSVP: link in bio</span>
         </div>
       </div>
@@ -172,11 +174,13 @@ export function JointC({ goa, dharamkot, range, size, title = 0 }: { goa: Poster
         </div>
         <div style={{ ...cond(), fontSize: size === "square" ? 120 : 150, lineHeight: 0.86, marginTop: 22, color: INKS.goa.b, textShadow: `5px 4px 0 ${INKS.dharamkot.a}` }}>{JOINT_TITLES[title % JOINT_TITLES.length]}</div>
         <FitBlock origin="top left" grow={1.4}>
-          {sec("goa", goa)}
-          {sec("dharamkot", dharamkot)}
+          <div style={{ paddingBottom: 18 }}>
+            {sec("goa", goa)}
+            {sec("dharamkot", dharamkot)}
+          </div>
         </FitBlock>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12 }}>
-          <Logos brands={["nomadgao"]} dark={false} height={36} gap={12} color="#1E2A33" />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, position: "relative", zIndex: 2 }}>
+          <Logos brands={[...goa, ...dharamkot].some((e) => e.brands.includes("hotpot")) ? ["hotpot", "nomadgao"] : ["nomadgao"]} dark={false} height={logoH(size)} gap={14} color="#1E2A33" />
           <span style={mono(22)}>RSVP: link in bio</span>
         </div>
       </div>

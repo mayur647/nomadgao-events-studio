@@ -8,7 +8,7 @@
  */
 import type { SizeId } from "@/lib/constants";
 import { FitText, Logos, type PosterEvent } from "../common";
-import { Box, f, frame, Grain, placeShort, shortVenue } from "./kit";
+import { Box, f, frame, Grain, logoH, placeShort, shortVenue } from "./kit";
 import { Shape, cond, inksFor, mono, nnum, weekNo } from "./DirC";
 
 export const MIX_LAYOUTS = ["postcard", "polaroid", "cover"] as const;
@@ -37,10 +37,10 @@ function TopBar({ ev, color, size }: { ev: PosterEvent; color: string; size: num
   );
 }
 
-function Foot({ ev, color, sq }: { ev: PosterEvent; color: string; sq: boolean }) {
+function Foot({ ev, color, size }: { ev: PosterEvent; color: string; size: SizeId }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `2px solid ${color}`, paddingTop: 14, flexShrink: 0 }}>
-      <Logos brands={ev.brands} dark={false} height={sq ? 30 : 36} gap={12} color={color} />
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `2px solid ${color}`, paddingTop: 14, flexShrink: 0, position: "relative", zIndex: 2 }}>
+      <Logos brands={ev.brands} dark={false} height={logoH(size)} gap={14} color={color} />
       <span style={mono(22)}>No. {weekNo(ev.date)}</span>
     </div>
   );
@@ -99,7 +99,7 @@ export function PostcardD({ ev, size, photo, qr }: P) {
             </div>
           </div>
         </div>
-        <Foot ev={ev} color={k.b} sq={sq} />
+        <Foot ev={ev} color={k.b} size={size} />
       </div>
       <Grain opacity={0.18} />
     </Box>
@@ -159,7 +159,7 @@ export function PolaroidD({ ev, size, photo, qr }: P) {
             <img src={qr} alt="" style={{ width: 140, height: 140, display: "block", mixBlendMode: "multiply" }} />
           )}
         </div>
-        <Foot ev={ev} color={k.b} sq={sq} />
+        <Foot ev={ev} color={k.b} size={size} />
       </div>
       <Grain opacity={0.16} />
     </Box>
@@ -188,8 +188,8 @@ export function CoverD({ ev, size, photo, qr }: P) {
             </div>
           </>
         )}
-        <div style={{ position: "absolute", left: fr.padX, right: fr.padX, top: story ? fr.padTop - 120 : fr.padTop - 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Logos brands={ev.brands} dark={false} height={sq ? 30 : 36} gap={12} color={k.b} plate={k.paper} />
+        <div style={{ position: "absolute", left: fr.padX, right: fr.padX, top: story ? fr.padTop + 10 : fr.padTop - 24, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+          <Logos brands={ev.brands} dark={false} height={logoH(size) - 10} gap={14} color={k.b} plate={k.paper} />
           <span style={{ ...mono(sq ? 20 : 24), background: k.a, color: k.b, padding: "6px 12px", transform: "rotate(2deg)" }}>{ev.feeShort}</span>
         </div>
       </div>
