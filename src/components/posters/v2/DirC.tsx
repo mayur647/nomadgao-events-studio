@@ -8,22 +8,22 @@ import type { LocationId, SizeId } from "@/lib/constants";
 import { FitBlock, FitText, Logos, type PosterEvent } from "../common";
 import { Box, f, frame, Grain, placeShort, shortVenue } from "./kit";
 
-const INKS: Record<LocationId | "hotpot", { a: string; b: string; paper: string }> = {
+export const INKS: Record<LocationId | "hotpot", { a: string; b: string; paper: string }> = {
   goa: { a: "#FF6B4A", b: "#0B5A8C", paper: "#F3EDE2" }, // sunset coral + Arabian Sea blue
   dharamkot: { a: "#E9A23B", b: "#2E4F3E", paper: "#F1EEE6" }, // monk saffron + deodar green
   hotpot: { a: "#F2C14E", b: "#B8262A", paper: "#F7F1E3" }, // broth yellow + chili red
 };
-const inksFor = (ev: { brands: string[]; location: LocationId }) => (ev.brands.includes("hotpot") ? INKS.hotpot : INKS[ev.location]);
-const mono = (size: number): React.CSSProperties => ({ fontFamily: f.mono, fontSize: size, fontWeight: 500, letterSpacing: "0.02em", textTransform: "uppercase" });
-const cond = (): React.CSSProperties => ({ fontFamily: f.condensed, fontWeight: 900, fontStretch: "62%", textTransform: "uppercase", letterSpacing: "-0.005em", width: "100%" });
+export const inksFor = (ev: { brands: string[]; location: LocationId }) => (ev.brands.includes("hotpot") ? INKS.hotpot : INKS[ev.location]);
+export const mono = (size: number): React.CSSProperties => ({ fontFamily: f.mono, fontSize: size, fontWeight: 500, letterSpacing: "0.02em", textTransform: "uppercase" });
+export const cond = (): React.CSSProperties => ({ fontFamily: f.condensed, fontWeight: 900, fontStretch: "62%", textTransform: "uppercase", letterSpacing: "-0.005em", width: "100%" });
 
-const nnum = (iso: string) => {
+export const nnum = (iso: string) => {
   const d = new Date(iso + "T00:00:00");
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
 /** The place's shape, printed as a halftone in the first ink. */
-function Shape({ kind, color, w, h }: { kind: "sun" | "peak" | "pot"; color: string; w: number; h: number }) {
+export function Shape({ kind, color, w, h }: { kind: "sun" | "peak" | "pot"; color: string; w: number; h: number }) {
   const dots = { backgroundImage: `radial-gradient(circle at center, ${color} 42%, transparent 44%)`, backgroundSize: "12px 12px" };
   if (kind === "sun") return <div style={{ position: "absolute", width: w * 0.86, height: w * 0.86, right: -w * 0.18, top: -w * 0.08, borderRadius: "50%", ...dots, mixBlendMode: "multiply" }} />;
   if (kind === "pot")
@@ -94,7 +94,7 @@ export function EventC({ ev, size, photo, qr }: { ev: PosterEvent; size: SizeId;
   );
 }
 
-function weekNo(iso: string) {
+export function weekNo(iso: string) {
   const d = new Date(iso + "T00:00:00");
   const start = new Date(d.getFullYear(), 0, 1);
   return String(Math.ceil(((+d - +start) / 864e5 + start.getDay() + 1) / 7)).padStart(2, "0");

@@ -8,6 +8,7 @@ import { toPosterEvent } from "@/components/posters/common";
 import { CalA, EventA, JointA } from "@/components/posters/v2/DirA";
 import { CalB, EventB, JointB } from "@/components/posters/v2/DirB";
 import { CalC, EventC, JointC } from "@/components/posters/v2/DirC";
+import { MixPoster, type MixLayout } from "@/components/posters/v2/DirD";
 
 /** Design lab: renders one new-direction poster at full size. /lab?d=A&k=event&i=0&size=post&photo=1 */
 const WEEK = "2026-11-09";
@@ -33,9 +34,11 @@ export default function Lab() {
   const goa = evs.filter((e) => e.location === "goa");
   const dk = evs.filter((e) => e.location === "dharamkot");
   const locEvs = loc === "goa" ? goa : dk;
-  const E = { A: EventA, B: EventB, C: EventC }[d]!;
-  const C = { A: CalA, B: CalB, C: CalC }[d]!;
-  const J = { A: JointA, B: JointB, C: JointC }[d]!;
+  const layout = (q.get("l") ?? "postcard") as MixLayout;
+  const Mix = (p: Parameters<typeof EventC>[0]) => <MixPoster layout={layout} {...p} />;
+  const E = { A: EventA, B: EventB, C: EventC, D: Mix }[d]!;
+  const C = { A: CalA, B: CalB, C: CalC, D: CalC }[d]!;
+  const J = { A: JointA, B: JointB, C: JointC, D: JointC }[d]!;
   return (
     <div id="poster" style={{ display: "inline-block" }}>
       {k === "event" && <E ev={ev} size={size} photo={photo} qr={qr} />}
