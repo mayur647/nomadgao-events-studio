@@ -6,7 +6,7 @@ import type { EventRow, PhotoRow } from "@/lib/types";
 import { safeName } from "@/lib/export";
 import { dateShort, dayName, weekRange } from "@/lib/format";
 import { toPosterEvent } from "./common";
-import { CAL_TITLES, CalC, JOINT_TITLES, JointC } from "./v2/DirC";
+import { MIX_CAL_TITLES, MixCalendar, type CalSection } from "./v2/MixCalendars";
 import { MIX_LAYOUTS, MIX_NAMES, MixPoster } from "./v2/DirD";
 
 export interface PosterSpec {
@@ -50,11 +50,21 @@ export function buildSpecs(opts: {
   const dk = sorted.filter((e) => e.location === "dharamkot");
   const range = `${dateShort(week)}`;
 
-  // ── joint calendar (Printed matter programme sheet; Shuffle changes the headline)
+  // Shuffle on any card moves it to the next of the three styles; after all three, the headline (calendars) or photo (events) changes too.
+  const calLayout = (key: string, off: number) => {
+    const deckC = shuffled(MIX_LAYOUTS, hash(seed, "cal-deck"));
+    const base = hash(seed, key) % 3;
+    const n = base + off;
+    return { layout: deckC[n % 3], title: MIX_CAL_TITLES[(hash(seed, key, "t") + Math.floor(n / 3)) % MIX_CAL_TITLES.length] };
+  };
+
+  // ── joint calendar
   if (sorted.length) {
-    const off = offsets.joint ?? 0;
-    const title = (hash(seed, "joint") + off) % JOINT_TITLES.length;
-    const pg = goa.map(toPosterEvent), pd = dk.map(toPosterEvent);
+    const { layout, title } = calLayout("joint", offsets.joint ?? 0);
+    const sections: CalSection[] = [
+      { loc: "goa" as LocationId, events: goa.map(toPosterEvent) },
+      { loc: "dharamkot" as LocationId, events: dk.map(toPosterEvent) },
+    ].filter((x) => x.events.length);
     specs.push({
       key: "joint",
       kind: "joint",
@@ -62,11 +72,11 @@ export function buildSpecs(opts: {
       sub: "Goa + Dharamkot",
       location: "both",
       events: sorted,
-      template: "programme",
-      look: `Programme · "${JOINT_TITLES[title]}"`,
+      template: layout,
+      look: `${MIX_NAMES[layout]} · "${title}"`,
       fileBase: `00-joint-calendar-${range.replace(" ", "")}`,
       photoPath: null,
-      render: (size) => <JointC goa={pg} dharamkot={pd} range={weekRange(week)} size={size} title={title} />,
+      render: (size) => <MixCalendar layout={layout} sections={sections} range={weekRange(week)} size={size} title={title} />,
     });
   }
 
@@ -74,9 +84,8 @@ export function buildSpecs(opts: {
   for (const [loc, list] of [["goa", goa], ["dharamkot", dk]] as [LocationId, EventRow[]][]) {
     if (!list.length) continue;
     const key = `cal-${loc}`;
-    const off = offsets[key] ?? 0;
-    const title = (hash(seed, key) + off) % CAL_TITLES.length;
-    const pe = list.map(toPosterEvent);
+    const { layout, title } = calLayout(key, offsets[key] ?? 0);
+    const sections: CalSection[] = [{ loc, events: list.map(toPosterEvent) }];
     specs.push({
       key,
       kind: "location",
@@ -84,11 +93,11 @@ export function buildSpecs(opts: {
       sub: `${list.length} event${list.length > 1 ? "s" : ""}`,
       location: loc,
       events: list,
-      template: "programme",
-      look: `Programme · "${CAL_TITLES[title].join(" ")}"`,
+      template: layout,
+      look: `${MIX_NAMES[layout]} · "${title}"`,
       fileBase: `${loc === "goa" ? "01" : "02"}-${loc}-calendar-${range.replace(" ", "")}`,
       photoPath: null,
-      render: (size) => <CalC location={loc} events={pe} range={weekRange(week)} size={size} title={title} />,
+      render: (size) => <MixCalendar layout={layout} sections={sections} range={weekRange(week)} size={size} title={title} />,
     });
   }
 
@@ -96,8 +105,8 @@ export function buildSpecs(opts: {
   const deck = shuffled(MIX_LAYOUTS, hash(seed, "deck"));
   sorted.forEach((e, i) => {
     const off = offsets[e.id] ?? 0;
-    const s = hash(seed, e.id, off);
     const layout = deck[(i + off) % deck.length];
+    const s = hash(seed, e.id, Math.floor(off / deck.length)); // photo changes once all three styles have been shown
     const photos_ = photoPool(e, photos);
     const photoPath = photos_.length ? photos_[hash(s, "photo") % photos_.length] : null;
     const photo = photoPath ? photoData[photoPath] ?? null : null;

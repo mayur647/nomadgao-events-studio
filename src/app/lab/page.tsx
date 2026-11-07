@@ -9,6 +9,7 @@ import { CalA, EventA, JointA } from "@/components/posters/v2/DirA";
 import { CalB, EventB, JointB } from "@/components/posters/v2/DirB";
 import { CalC, EventC, JointC } from "@/components/posters/v2/DirC";
 import { MixPoster, type MixLayout } from "@/components/posters/v2/DirD";
+import { MixCalendar } from "@/components/posters/v2/MixCalendars";
 
 /** Design lab: renders one new-direction poster at full size. /lab?d=A&k=event&i=0&size=post&photo=1 */
 const WEEK = "2026-11-09";
@@ -44,6 +45,7 @@ export default function Lab() {
       {k === "event" && <E ev={ev} size={size} photo={photo} qr={qr} />}
       {k === "cal" && <C location={loc} events={locEvs} range={range} size={size} photo={q.get("photo") === "1" ? PHOTOS[0] : null} />}
       {k === "joint" && <J goa={goa} dharamkot={dk} range={range} size={size} />}
+      {k === "mcal" && <MixCalendar layout={layout} sections={loc === ("both" as string) ? [{ loc: "goa", events: goa }, { loc: "dharamkot", events: dk }] : [{ loc, events: locEvs }]} range={range} size={size} title={q.get("t") ?? "This week"} />}
     </div>
   );
 }
