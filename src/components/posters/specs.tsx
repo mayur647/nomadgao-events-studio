@@ -55,7 +55,8 @@ export function buildSpecs(opts: {
     const deckC = shuffled(MIX_LAYOUTS, hash(seed, "cal-deck"));
     const base = hash(seed, key) % 3;
     const n = base + off;
-    return { layout: deckC[n % 3], title: MIX_CAL_TITLES[(hash(seed, key, "t") + Math.floor(n / 3)) % MIX_CAL_TITLES.length] };
+    const pick = offsets[`style:${key}`];
+    return { layout: pick !== undefined ? MIX_LAYOUTS[pick % 3] : deckC[n % 3], title: MIX_CAL_TITLES[(hash(seed, key, "t") + Math.floor(n / 3)) % MIX_CAL_TITLES.length] };
   };
 
   // ── joint calendar
@@ -105,7 +106,8 @@ export function buildSpecs(opts: {
   const deck = shuffled(MIX_LAYOUTS, hash(seed, "deck"));
   sorted.forEach((e, i) => {
     const off = offsets[e.id] ?? 0;
-    const layout = deck[(i + off) % deck.length];
+    const pick = offsets[`style:${e.id}`];
+    const layout = pick !== undefined ? MIX_LAYOUTS[pick % 3] : deck[(i + off) % deck.length];
     const s = hash(seed, e.id, Math.floor(off / deck.length)); // photo changes once all three styles have been shown
     const photos_ = photoPool(e, photos);
     const photoPath = photos_.length ? photos_[hash(s, "photo") % photos_.length] : null;

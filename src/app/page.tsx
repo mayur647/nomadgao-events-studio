@@ -14,6 +14,7 @@ import { CHANNELS, eventCaptions, weekCaptions, type Captions, type Channel } fr
 import { canShareFiles, copyText, downloadBlob, openWhatsApp, qrDataUrl, renderPng, shareFiles, toDataUrl, zipFiles } from "@/lib/export";
 import type { EventRow, PhotoRow } from "@/lib/types";
 import { archivePoster, archiveProblem, loadLook, saveLook } from "@/lib/archive";
+import { MIX_LAYOUTS, MIX_NAMES } from "@/components/posters/v2/DirD";
 
 const ALL_SIZES: SizeId[] = ["story", "post", "square"];
 
@@ -334,8 +335,17 @@ export default function StudioPage() {
                 });
                 setCapSeed((x) => ({ ...x, [s.key]: (x[s.key] ?? 0) + 1 }));
               }}
+              onStyle={(i) => {
+                touch();
+                setOffsets((o) => ({ ...o, [`style:${s.key}`]: i }));
+              }}
               onShuffle={() => {
                 touch();
+                setOffsets((o) => {
+                  const x = { ...o };
+                  delete x[`style:${s.key}`];
+                  return x;
+                });
                 setOffsets((o) => ({ ...o, [s.key]: (o[s.key] ?? 0) + 1 }));
               }}
               render={render}
@@ -374,6 +384,7 @@ function PosterCard({
   onCaption,
   onNewCaption,
   onShuffle,
+  onStyle,
   render,
   keep,
   log,
@@ -389,6 +400,7 @@ function PosterCard({
   onCaption: (c: Captions) => void;
   onNewCaption: () => void;
   onShuffle: () => void;
+  onStyle: (i: number) => void;
   render: (s: PosterSpec, sz: SizeId) => Promise<Blob>;
   keep: (s: PosterSpec, sz: SizeId, png: Blob, c: Captions) => Promise<boolean>;
   log: (rows: { spec: PosterSpec; action: string; size?: string; count?: number }[]) => Promise<void>;
@@ -503,7 +515,7 @@ function PosterCard({
           </button>
         ) : (
           <>
-            <button className="btn-ghost btn-sm" onClick={onShuffle} title="Try another layout and photo">
+            <button className="btn-ghost btn-sm" onClick={onShuffle} title="Next style; after all three, a new photo or headline">
               🎲 Shuffle
             </button>
             <button className="btn-ghost btn-sm" onClick={onArchive} disabled={busyAll} title="Save all 3 sizes to Past posters and hide it here">
@@ -512,6 +524,16 @@ function PosterCard({
           </>
         )}
       </div>
+      {!archived && (
+        <div className="flex flex-wrap items-center gap-1 mt-3" role="radiogroup" aria-label="Style">
+          <span className="text-xs font-semibold text-mute mr-1">Style</span>
+          {MIX_LAYOUTS.map((l, i) => (
+            <button key={l} role="radio" aria-checked={spec.template === l} className={`chip !text-xs !py-1 ${spec.template === l ? "chip-on" : ""}`} onClick={() => onStyle(i)}>
+              {MIX_NAMES[l]}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap gap-2 mt-3">
         <button className="btn-primary btn-sm" onClick={download} disabled={!!busy}>
           {busy === "download" ? "Making…" : `Download ${SIZES[size].label.toLowerCase()}`}
